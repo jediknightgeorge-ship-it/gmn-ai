@@ -61,6 +61,8 @@ import urllib.request
 import tkinter as tk
 from tkinter import colorchooser, filedialog, messagebox, scrolledtext, simpledialog, ttk
 
+from estilo_apple import BotonRedondo, crear_tarjeta, imagen_redondeada, mezclar, pintar_tarjeta
+
 from crewai import Agent, Crew, Process, Task
 from langchain_openai import ChatOpenAI
 
@@ -237,6 +239,58 @@ CPU_ES_AMD_FAMILIA15 = _detectar_cpu_amd_familia15()
 TIPOS_CACHE_KV = ["f32", "f16", "bf16", "q8_0", "q5_1", "q5_0", "q4_1", "q4_0", "iq4_nl"]
 CONTEXTOS = ["4096", "8192", "16384", "32768", "65536", "131072", "262144", "524288", "1000000"]
 
+# Combinaciones de muestreo listas para usar. "repeat" es la penalizacion de
+# repeticion clasica; "presence" y "dry" son las que mas ayudan contra bucles
+# infinitos en modelos pequenos (ver videos de bucles/repeticiones de Nichonauta
+# y la guia de Qwen). Vacio = no mandar el parametro (usa el del motor).
+PRESETS_MUESTREO = {
+    "Por defecto": {"temp": "", "top_p": "", "top_k": "", "min_p": "", "repeat": "1.1", "presence": "", "dry": "", "reasoning": ""},
+    "Anti-bucles": {"temp": "0.7", "top_p": "0.95", "top_k": "40", "min_p": "0.05", "repeat": "1.1", "presence": "1.0", "dry": "0.8", "reasoning": ""},
+    "Código preciso": {"temp": "0.2", "top_p": "0.9", "top_k": "40", "min_p": "0.05", "repeat": "1.05", "presence": "", "dry": "", "reasoning": ""},
+    "Creativo": {"temp": "0.9", "top_p": "0.95", "top_k": "60", "min_p": "0.05", "repeat": "1.1", "presence": "0.5", "dry": "", "reasoning": ""},
+}
+
+# Perfiles ya hechos (aparecen arriba en "Perfiles de configuración" con una ★).
+# Solo tocan las opciones de rendimiento/memoria; no cambian el modelo, el
+# puerto, la clave ni el muestreo. Los valores salen de pruebas reales con
+# llama-server b11223 en una RTX 2080 Ti (11 GB) + FX-8320E + 28 GB de RAM.
+_BASE_RENDIMIENTO = {
+    "turboquant": True, "kv_k": "q8_0", "kv_v": "q8_0", "auto_fit": False, "fit_margen": "512",
+    "batch_size": "512", "ubatch_size": "256", "load_mode": "auto", "tipo_spec": "Ninguna",
+    "spec_n_max": "", "spec_p_min": "", "moe_modo": "Ninguno", "moe_n_capas": "", "rope_modo": "Ninguno",
+    "yarn_orig": "",
+}
+PERFILES_INCLUIDOS = {
+    "★ ⚡ Rápido en mi GPU (el modelo cabe)": {
+        "descripcion": "Todo el modelo en la GPU, contexto 8k y caché KV cuantizada. Lo más veloz cuando el\n"
+                       "modelo cabe en tu VRAM (ej. un 27B en IQ2 corre a ~20 tok/s en una 2080 Ti).",
+        "valores": dict(_BASE_RENDIMIENTO, contexto="8192", ngl="all"),
+    },
+    "★ 📚 Gran contexto y rápido": {
+        "descripcion": "El motor calcula solo el contexto más grande que entra en tu VRAM libre (con 0.5 GB\n"
+                       "de margen para que Windows no se cuelgue) y usa la caché KV cuantizada.",
+        "valores": dict(_BASE_RENDIMIENTO, contexto="32768", ngl="auto", auto_fit=True, fit_margen="512"),
+    },
+    "★ 🐘 Modelo grande (solo lo que cabe en la GPU)": {
+        "descripcion": "Para modelos más grandes que tu VRAM: sube a la GPU las capas que caben y deja el resto\n"
+                       "en la RAM (la velocidad la limita tu RAM/CPU). Contexto automático con margen.",
+        "valores": dict(_BASE_RENDIMIENTO, contexto="8192", ngl="auto", auto_fit=True, fit_margen="512",
+                        batch_size="256", ubatch_size="128"),
+    },
+    "★ 🧩 Modelo MoE grande (expertos en la RAM)": {
+        "descripcion": "Para modelos MoE (Nemotron 3 Nano 30B, Qwen 35B-A3B...): lo compartido va a la GPU y\n"
+                       "los 'expertos' se quedan en la RAM, así se usa solo lo necesario. Si no es MoE, no cambia nada.",
+        "valores": dict(_BASE_RENDIMIENTO, contexto="16384", ngl="all", auto_fit=True, fit_margen="512",
+                        moe_modo="Todos los expertos en CPU (-cmoe)"),
+    },
+    "★ 🛡️ Seguro (no saturar la VRAM)": {
+        "descripcion": "Contexto 4k, margen de 1 GB de VRAM libre y lotes chicos: para cuando usas la PC a la vez\n"
+                       "(juegos, edición) o el sistema se pone lento al cargar un modelo.",
+        "valores": dict(_BASE_RENDIMIENTO, contexto="4096", ngl="auto", auto_fit=True, fit_margen="1024",
+                        batch_size="256", ubatch_size="128"),
+    },
+}
+
 PRESETS_TURBOQUANT = {
     "Calidad máxima": {"activar": False, "k": "f16", "v": "f16"},
     "Balanceado (recomendado)": {"activar": True, "k": "q8_0", "v": "q8_0"},
@@ -288,14 +342,14 @@ PALETAS = {
         "acento2": "#0B7A55",
         "ok": "#1B7E50", "warn": "#906909", "peligro": "#C33F3F",
     },
-    # Tema por defecto del programa: celeste pastel clarito (modo dia).
-    # El acento tambien se suaviza (menos saturado, mas "pastel") respecto
-    # a la version anterior, que era un azul mas vivo/electrico.
+    # Tema por defecto del programa (estilo Apple, modo dia): fondo celeste
+    # pastel muy claro, tarjetas blancas, texto casi negro y el azul de
+    # sistema de Apple como acento (texto blanco encima, contraste 4.6:1).
     "Azul Celeste ☀️": {
-        "bg": "#F1F9FF", "panel": "#E3F1FB", "borde": "#CFE6F7",
-        "texto": "#1A3446", "texto_dim": "#5D7C90",
-        "acento": "#6FB8E8", "acento_hover": "#8FCBF2", "acento_texto": "#0B2233",
-        "acento2": "#4A93C7",
+        "bg": "#EEF5FC", "panel": "#FFFFFF", "borde": "#DCE7F2",
+        "texto": "#1D1D1F", "texto_dim": "#6B7480",
+        "acento": "#0071E3", "acento_hover": "#1F86F0", "acento_texto": "#FFFFFF",
+        "acento2": "#0058B0",
         "ok": "#1B7E50", "warn": "#906909", "peligro": "#C33F3F",
     },
 }
@@ -364,23 +418,22 @@ def generar_paleta_desde_acento(acento_hex, modo_noche):
     cualquier color que el usuario elija se ve bien y las letras nunca
     quedan ilegibles, ya sea de dia o de noche.
     """
+    # Estilo Apple: de dia, fondo con un toque del color y tarjetas blancas;
+    # de noche, fondo casi negro y tarjetas gris oscuro, ambos teñidos apenas
+    # con el acento elegido. El texto sale de un gris Apple (no del acento).
     if modo_noche:
-        bg = interpolar_hex(acento_hex, "#000000", 0.92)
-        panel = interpolar_hex(acento_hex, "#000000", 0.86)
-        borde = interpolar_hex(acento_hex, "#000000", 0.72)
-        texto = interpolar_hex(acento_hex, "#FFFFFF", 0.92)
-        texto_dim = interpolar_hex(acento_hex, "#FFFFFF", 0.55)
-        acento_hover = interpolar_hex(acento_hex, "#FFFFFF", 0.25)
-        acento2 = interpolar_hex(acento_hex, "#000000", 0.45)
+        bg = interpolar_hex("#141416", acento_hex, 0.07)
+        panel = interpolar_hex("#232326", acento_hex, 0.07)
+        borde = interpolar_hex("#3A3A3F", acento_hex, 0.12)
+        texto = interpolar_hex("#F5F5F7", acento_hex, 0.04)
+        texto_dim = interpolar_hex("#A1A1A8", acento_hex, 0.08)
         ok, warn, peligro = "#3FDD9B", "#E3B341", "#F85149"
     else:
-        bg = interpolar_hex(acento_hex, "#FFFFFF", 0.94)
-        panel = interpolar_hex(acento_hex, "#FFFFFF", 0.88)
-        borde = interpolar_hex(acento_hex, "#FFFFFF", 0.65)
-        texto = interpolar_hex(acento_hex, "#000000", 0.85)
-        texto_dim = interpolar_hex(acento_hex, "#000000", 0.45)
-        acento_hover = interpolar_hex(acento_hex, "#FFFFFF", 0.2)
-        acento2 = interpolar_hex(acento_hex, "#000000", 0.3)
+        bg = interpolar_hex(acento_hex, "#FFFFFF", 0.93)
+        panel = "#FFFFFF"
+        borde = interpolar_hex(acento_hex, "#FFFFFF", 0.86)
+        texto = interpolar_hex("#1D1D1F", acento_hex, 0.05)
+        texto_dim = interpolar_hex("#6B6B72", acento_hex, 0.10)
         ok, warn, peligro = "#1B7E50", "#906909", "#C33F3F"
 
     # Si el acento en si es demasiado claro (de noche) o demasiado oscuro
@@ -391,14 +444,34 @@ def generar_paleta_desde_acento(acento_hex, modo_noche):
     elif not modo_noche and _luminancia_relativa(acento_boton) > 0.85:
         acento_boton = interpolar_hex(acento_boton, "#000000", 0.25)
 
+    # Texto blanco sobre el boton (como Apple) siempre que se logre contraste
+    # >= 4.5:1 oscureciendo el acento hasta un 30%; si no se logra, se usa el
+    # texto (blanco o negro) con mejor contraste sobre el acento original.
+    acento_texto = "#FFFFFF"
+    if _contraste_wcag(acento_boton, "#FFFFFF") < 4.5:
+        candidato = acento_boton
+        for paso in range(1, 7):
+            candidato = interpolar_hex(acento_boton, "#000000", paso * 0.05)
+            if _contraste_wcag(candidato, "#FFFFFF") >= 4.5:
+                break
+        if _contraste_wcag(candidato, "#FFFFFF") >= 4.5:
+            acento_boton = candidato
+        else:
+            acento_texto = _texto_legible_sobre(acento_boton)
+
     return {
         "bg": bg, "panel": panel, "borde": borde,
         "texto": texto, "texto_dim": texto_dim,
-        "acento": acento_boton, "acento_hover": acento_hover,
-        "acento_texto": _texto_legible_sobre(acento_boton),
-        "acento2": acento2,
+        "acento": acento_boton,
+        "acento_hover": interpolar_hex(acento_boton, "#FFFFFF", 0.15),
+        "acento_texto": acento_texto,
+        "acento2": interpolar_hex(acento_boton, "#000000", 0.3),
         "ok": ok, "warn": warn, "peligro": peligro,
     }
+
+
+# Version nocturna del tema por defecto (mismo azul, combinado para modo noche).
+PALETAS["Azul Noche 🌙"] = generar_paleta_desde_acento("#0A84FF", True)
 
 
 def buscar_binario(nombre):
@@ -550,6 +623,8 @@ class AppAgentesia:
         self.tema = cargar_tema_guardado()
         self._widgets_panel = []
         self._widgets_texto = []
+        self._tarjetas = []
+        self._repintado_tarjetas_job = None
         self._paginas = {}
         self._botones_sidebar = {}
 
@@ -638,6 +713,22 @@ class AppAgentesia:
         # ---------- Estado: seguridad del servidor (API key) ----------
         self.var_api_key = tk.StringVar(value="")
         self.var_cors_origins = tk.StringVar(value="*")
+
+        # ---------- Estado: muestreo / anti-bucles, razonamiento, YaRN, dispositivos ----------
+        self.var_temp = tk.StringVar(value="")
+        self.var_top_p = tk.StringVar(value="")
+        self.var_top_k = tk.StringVar(value="")
+        self.var_min_p = tk.StringVar(value="")
+        self.var_repeat_penalty = tk.StringVar(value="1.1")
+        self.var_presence_penalty = tk.StringVar(value="")
+        self.var_dry = tk.StringVar(value="")
+        self.var_reasoning_budget = tk.StringVar(value="")
+        self.var_rope_modo = tk.StringVar(value="Ninguno")
+        self.var_yarn_orig = tk.StringVar(value="")
+        self.var_dispositivos = tk.StringVar(value="")
+        self.var_tensor_split = tk.StringVar(value="")
+        self.var_split_mode = tk.StringVar(value="")
+        self.var_main_gpu = tk.StringVar(value="")
         self.var_timeout = tk.StringVar(value="")
 
         # ---------- Estado: monitor en vivo ----------
@@ -670,10 +761,17 @@ class AppAgentesia:
         self._widgets_panel.append(("bg", cuerpo))
 
         # ---------------- Sidebar de navegacion ----------------
-        self.sidebar = tk.Frame(cuerpo, width=200)
+        self.sidebar = tk.Frame(cuerpo, width=224)
         self.sidebar.pack(side=tk.LEFT, fill=tk.Y)
         self.sidebar.pack_propagate(False)
-        self._widgets_panel.append(("panel", self.sidebar))
+        self._widgets_panel.append(("sidebar", self.sidebar))
+        tk.Frame(self.sidebar, height=10).pack()  # aire arriba, como en macOS
+        self._widgets_panel.append(("sidebar", self.sidebar.winfo_children()[-1]))
+
+        # Linea fina que separa la barra lateral del contenido.
+        self.separador_sidebar = tk.Frame(cuerpo, width=1)
+        self.separador_sidebar.pack(side=tk.LEFT, fill=tk.Y)
+        self._widgets_panel.append(("borde", self.separador_sidebar))
 
         modulos = [
             ("modelos", "🧩", "Modelos"),
@@ -691,9 +789,9 @@ class AppAgentesia:
         for clave, icono, etiqueta in modulos:
             self._crear_boton_sidebar(clave, icono, etiqueta)
 
-        self.lbl_estado_sidebar = tk.Label(self.sidebar, text="Estado: Listo", font=("Segoe UI", 8, "italic"), wraplength=180, justify="left")
-        self.lbl_estado_sidebar.pack(side=tk.BOTTOM, fill=tk.X, padx=14, pady=14)
-        self._registrar_texto(self.lbl_estado_sidebar, "panel", dim=True)
+        self.lbl_estado_sidebar = tk.Label(self.sidebar, text="Estado: Listo", font=("Segoe UI", 9), wraplength=196, justify="left", anchor="w")
+        self.lbl_estado_sidebar.pack(side=tk.BOTTOM, fill=tk.X, padx=16, pady=14)
+        self._registrar_texto(self.lbl_estado_sidebar, "sidebar", dim=True)
 
         # ---------------- Area de contenido (paginas apiladas) ----------------
         self.area_contenido = tk.Frame(cuerpo)
@@ -715,23 +813,37 @@ class AppAgentesia:
         for pagina in self._paginas.values():
             pagina.place(in_=self.area_contenido, x=0, y=0, relwidth=1, relheight=1)
 
+    def _color_sidebar(self):
+        """Color de la barra lateral: un tono apenas distinto al del fondo."""
+        t = self.tema
+        return mezclar(t["bg"], t["borde"], 0.55)
+
     def _crear_boton_sidebar(self, clave, icono, etiqueta):
-        b = tk.Button(
-            self.sidebar, text=f"  {icono}  {etiqueta}", font=("Segoe UI", 10), anchor="w",
-            relief="flat", bd=0, cursor="hand2", padx=10, pady=10,
-            command=lambda: self.mostrar_pagina(clave),
+        b = BotonRedondo(
+            self.sidebar, text=etiqueta, icono=icono, font=("Segoe UI", 10), anchor="w",
+            padx=12, pady=9, radio=9, command=lambda: self.mostrar_pagina(clave),
         )
-        b.pack(fill=tk.X, padx=8, pady=2)
+        b.pack(fill=tk.X, padx=10, pady=1)
         self._botones_sidebar[clave] = b
+
+    def _estilo_sidebar(self, clave_activa=None):
+        """Item activo en acento (redondeado); el resto transparente con hover suave."""
+        t = self.tema
+        fondo = self._color_sidebar()
+        if clave_activa is None:
+            clave_activa = getattr(self, "_pagina_actual", None)
+        for k, b in self._botones_sidebar.items():
+            if k == clave_activa:
+                b.configure(bg=t["acento"], fg=t["acento_texto"],
+                            activebackground=t["acento_hover"], activeforeground=t["acento_texto"])
+            else:
+                b.configure(bg=fondo, fg=t["texto"],
+                            activebackground=mezclar(fondo, t["borde"], 0.7), activeforeground=t["texto"])
 
     def mostrar_pagina(self, clave):
         self._paginas[clave].tkraise()
-        for k, b in self._botones_sidebar.items():
-            t = self.tema
-            if k == clave:
-                b.configure(bg=t["acento"], fg=t["acento_texto"])
-            else:
-                b.configure(bg=t["panel"], fg=t["texto"])
+        self._pagina_actual = clave
+        self._estilo_sidebar(clave)
 
         if clave == "monitor":
             self._iniciar_monitor()
@@ -747,41 +859,63 @@ class AppAgentesia:
         self._logo_img = None
         if os.path.isfile(RUTA_LOGO_JAGUAR):
             try:
-                self._logo_img = tk.PhotoImage(file=RUTA_LOGO_JAGUAR)
+                # Se reduce con Pillow (suavizado) a un tamano comodo para el encabezado.
+                import base64
+                import io
+                from PIL import Image
+                im = Image.open(RUTA_LOGO_JAGUAR).convert("RGBA").resize((46, 46), Image.LANCZOS)
+                buf = io.BytesIO()
+                im.save(buf, "PNG")
+                self._logo_img = tk.PhotoImage(data=base64.b64encode(buf.getvalue()))
             except Exception:
-                self._logo_img = None
+                try:
+                    self._logo_img = tk.PhotoImage(file=RUTA_LOGO_JAGUAR)
+                except Exception:
+                    self._logo_img = None
         return self._logo_img
 
     def _redibujar_header(self):
+        """Encabezado plano estilo Apple: logo, titulo, subtitulo y una
+        pastilla dia/noche a la derecha, con una linea fina abajo."""
         c = self.header_canvas
+        t = self.tema
         c.delete("all")
+        c.configure(bg=t["bg"])
         ancho = max(c.winfo_width(), 1)
         alto = max(c.winfo_height(), 1)
-        c1 = self.tema["acento2"]
-        c2 = self.tema["bg"]
-        pasos = 60
-        for i in range(pasos):
-            t = i / pasos
-            color = interpolar_hex(c1, c2, t)
-            x0 = int(ancho * t)
-            x1 = int(ancho * (t + 1 / pasos)) + 1
-            c.create_rectangle(x0, 0, x1, alto, fill=color, outline=color)
+        c.create_line(0, alto - 1, ancho, alto - 1, fill=t["borde"])
 
         logo = self._cargar_logo()
+        cy = alto // 2
         if logo is not None:
-            cx = 16 + logo.width() // 2
-            cy = alto // 2
-            c.create_image(cx, cy, image=logo, anchor="center")
-            texto_x = 16 + logo.width() + 14
+            c.create_image(24 + logo.width() // 2, cy, image=logo, anchor="center")
+            texto_x = 24 + logo.width() + 14
         else:
             # Sin el logo (no se encontro el archivo): circulo con emoji de respaldo.
-            cx, cy, r = 38, alto // 2, 22
-            c.create_oval(cx - r, cy - r, cx + r, cy + r, fill=self.tema["acento"], outline="")
+            cx, r = 46, 23
+            c.create_oval(cx - r, cy - r, cx + r, cy + r, fill=t["acento"], outline="")
             c.create_text(cx, cy, text="🐆", font=("Segoe UI Emoji", 18))
-            texto_x = cx + 46
+            texto_x = cx + r + 14
 
-        c.create_text(texto_x, cy - 10, anchor="w", text="Panel de Control · Agentes IA", fill="#FFFFFF", font=("Segoe UI", 15, "bold"))
-        c.create_text(texto_x, cy + 14, anchor="w", text="llama.cpp  +  TurboQuant  ·  Creado por G.M.N TechLab", fill="#D7F5E9", font=("Segoe UI", 9))
+        c.create_text(texto_x, cy - 11, anchor="w", text="GMN AI", fill=t["texto"], font=("Segoe UI", 17, "bold"))
+        c.create_text(texto_x, cy + 13, anchor="w", text="Panel de control · llama.cpp + TurboQuant · Creado por G.M.N TechLab",
+                      fill=t["texto_dim"], font=("Segoe UI", 9))
+
+        # Pastilla dia/noche (clic en cualquier lado la alterna).
+        noche = self._modo_noche_actual()
+        pw, ph, seg_w, seg_h = 80, 32, 36, 26
+        x1, y1 = ancho - 24 - pw, cy - ph // 2
+        pastilla = imagen_redondeada(pw, ph, ph // 2, t["panel"], t["borde"])
+        activa = imagen_redondeada(seg_w, seg_h, seg_h // 2, t["acento"])
+        self._imgs_header = [pastilla, activa]
+        c.create_image(x1, y1, anchor="nw", image=pastilla, tags="toggle")
+        sx = x1 + pw - 3 - seg_w if noche else x1 + 3
+        c.create_image(sx, y1 + 3, anchor="nw", image=activa, tags="toggle")
+        c.create_text(x1 + 3 + seg_w // 2, cy, text="☀️", font=("Segoe UI Emoji", 11), tags="toggle")
+        c.create_text(x1 + pw - 3 - seg_w // 2, cy, text="🌙", font=("Segoe UI Emoji", 11), tags="toggle")
+        c.tag_bind("toggle", "<Button-1>", lambda e: self.cambiar_modo_color(not self._modo_noche_actual()))
+        c.tag_bind("toggle", "<Enter>", lambda e: c.configure(cursor="hand2"))
+        c.tag_bind("toggle", "<Leave>", lambda e: c.configure(cursor=""))
 
     # ==================================================================
     # UTILIDADES DE CONSTRUCCION DE PAGINAS
@@ -820,21 +954,45 @@ class AppAgentesia:
             contenido.pack(fill=tk.BOTH, expand=True, padx=20, pady=18)
 
         self._widgets_panel.append(("bg", contenido))
-        lbl = tk.Label(contenido, text=titulo, font=("Segoe UI", 14, "bold"))
-        lbl.pack(anchor="w", pady=(0, 14))
+        lbl = tk.Label(contenido, text=titulo, font=("Segoe UI", 20, "bold"))
+        lbl.pack(anchor="w", pady=(0, 16))
         self._registrar_texto(lbl, "bg", subtitulo=True)
         return pagina, contenido
 
     def _crear_panel(self, padre, titulo=None):
-        panel = tk.Frame(padre, bd=1, relief="solid")
-        panel.pack(fill=tk.X, pady=(0, 12))
-        self._widgets_panel.append(("panel_borde", panel))
+        """Tarjeta redondeada (estilo Apple). Devuelve el contenedor interior
+        donde van los widgets; el fondo redondeado se repinta solo."""
+        exterior, interior, _fondo = crear_tarjeta(padre, radio=14)
+        exterior.pack(fill=tk.X, pady=(0, 14))
+        self._tarjetas.append(exterior)
+        self._widgets_panel.append(("panel", interior))
+        exterior.bind("<Configure>", lambda e: self._programar_repintado_tarjetas())
         if titulo:
-            self._crear_subtitulo(panel, titulo).pack(anchor="w", padx=14, pady=(10, 4))
-        return panel
+            self._crear_subtitulo(interior, titulo).pack(anchor="w", padx=14, pady=(10, 4))
+        return interior
+
+    def _programar_repintado_tarjetas(self):
+        """Repinta todas las tarjetas tras un instante (evita recalcular en
+        cada pixel mientras se redimensiona la ventana)."""
+        if self._repintado_tarjetas_job is not None:
+            try:
+                self.root.after_cancel(self._repintado_tarjetas_job)
+            except Exception:
+                pass
+        self._repintado_tarjetas_job = self.root.after(70, self._repintar_tarjetas)
+
+    def _repintar_tarjetas(self):
+        self._repintado_tarjetas_job = None
+        t = self.tema
+        for exterior in self._tarjetas:
+            try:
+                if exterior.winfo_ismapped():
+                    pintar_tarjeta(exterior, t["panel"], t["borde"], t["bg"])
+            except tk.TclError:
+                pass
 
     def _crear_subtitulo(self, padre, texto):
-        lbl = tk.Label(padre, text=texto, font=("Segoe UI", 10, "bold"))
+        lbl = tk.Label(padre, text=texto, font=("Segoe UI", 11, "bold"))
         self._registrar_texto(lbl, "panel", subtitulo=True)
         return lbl
 
@@ -844,14 +1002,31 @@ class AppAgentesia:
         return lbl
 
     def _crear_label_dim(self, padre, texto, fondo="panel", **kw):
-        lbl = tk.Label(padre, text=texto, font=("Segoe UI", 8), justify="left", **kw)
+        lbl = tk.Label(padre, text=texto, font=("Segoe UI", 9), justify="left", **kw)
         self._registrar_texto(lbl, fondo, dim=True)
         return lbl
 
     def _crear_boton(self, padre, texto, comando, primario=False, **kw):
-        b = tk.Button(padre, text=texto, font=("Segoe UI", 10, "bold" if primario else "normal"),
-                       relief="flat", bd=0, cursor="hand2", padx=10, pady=8, command=comando, **kw)
+        # Boton redondeado; el color real (primario/secundario) lo asigna aplicar_tema.
+        b = BotonRedondo(padre, text=texto, command=comando,
+                         font=("Segoe UI", 10, "bold" if primario else "normal"),
+                         padx=16, pady=7, radio=10, **kw)
+        b._primario = primario
         return b
+
+    # Estilos de boton reutilizables (los usa aplicar_tema para colorear todo igual).
+    def _est_primario(self):
+        t = self.tema
+        return dict(bg=t["acento"], fg=t["acento_texto"], activebackground=t["acento_hover"], activeforeground=t["acento_texto"])
+
+    def _est_secundario(self):
+        t = self.tema
+        return dict(bg=t["borde"], fg=t["texto"], activebackground=mezclar(t["borde"], t["texto"], 0.12), activeforeground=t["texto"])
+
+    def _est_peligro(self):
+        t = self.tema
+        base = mezclar(t["panel"], t["peligro"], 0.12)
+        return dict(bg=base, fg=t["peligro"], activebackground=mezclar(t["panel"], t["peligro"], 0.24), activeforeground=t["peligro"])
 
     def _crear_entry_config(self, padre, etiqueta, variable, fila, ancho=18):
         self._crear_label_card(padre, etiqueta).grid(row=fila, column=0, sticky="w", padx=12, pady=6)
@@ -926,7 +1101,7 @@ class AppAgentesia:
             command=self._al_cambiar_modo_router,
         )
         self.chk_modo_router.pack(anchor="w")
-        self._widgets_panel.append(("check", self.chk_modo_router))
+        self._widgets_panel.append(("check_bg", self.chk_modo_router))
 
         self.fila_opciones_router = tk.Frame(contenido)
         self._widgets_panel.append(("bg", self.fila_opciones_router))
@@ -939,7 +1114,7 @@ class AppAgentesia:
             variable=self.var_models_autoload, font=("Segoe UI", 9), bd=0, highlightthickness=0,
         )
         self.chk_models_autoload.pack(side=tk.LEFT)
-        self._widgets_panel.append(("check", self.chk_models_autoload))
+        self._widgets_panel.append(("check_bg", self.chk_models_autoload))
         # Solo tiene sentido con el Router activo; se muestra/oculta junto con el.
 
         buscador = tk.Frame(contenido)
@@ -980,17 +1155,29 @@ class AppAgentesia:
         pagina, contenido = self._nueva_pagina(padre, "🧠 TurboQuant y configuración del servidor")
 
         panel_perfiles = self._crear_panel(contenido, "💾 Perfiles de configuración")
+        # Botones de un clic para los perfiles incluidos (los mismos de la lista).
+        fila_rapidos = tk.Frame(panel_perfiles)
+        fila_rapidos.pack(fill=tk.X, padx=12, pady=(0, 8))
+        self._widgets_panel.append(("panel", fila_rapidos))
+        for nombre_perfil in PERFILES_INCLUIDOS:
+            corto = nombre_perfil.replace("★ ", "").split(" (")[0]
+            self._crear_boton(
+                fila_rapidos, corto, lambda n=nombre_perfil: (self.var_perfil_actual.set(n), self._al_elegir_perfil()),
+            ).pack(side=tk.LEFT, padx=(0, 6))
         fila_perfiles = tk.Frame(panel_perfiles)
         fila_perfiles.pack(fill=tk.X, padx=12, pady=(0, 6))
         self._widgets_panel.append(("panel", fila_perfiles))
         self.combo_perfiles = ttk.Combobox(
             fila_perfiles, textvariable=self.var_perfil_actual,
-            values=list(self.perfiles_guardados.keys()), width=26,
+            values=self._nombres_perfiles(), width=44,
         )
         self.combo_perfiles.pack(side=tk.LEFT, padx=(0, 8))
+        self.combo_perfiles.bind("<<ComboboxSelected>>", lambda e: self._al_elegir_perfil())
         self._crear_boton(fila_perfiles, "📥 Cargar", self.cargar_perfil_seleccionado).pack(side=tk.LEFT, padx=(0, 6))
         self._crear_boton(fila_perfiles, "💾 Guardar", self.guardar_perfil_actual, primario=True).pack(side=tk.LEFT, padx=(0, 6))
         self._crear_boton(fila_perfiles, "🗑 Eliminar", self.eliminar_perfil_seleccionado).pack(side=tk.LEFT)
+        self.lbl_desc_perfil = self._crear_label_dim(panel_perfiles, "Elige un perfil con ★ para aplicarlo al instante (⚡ rápido, 📚 gran contexto, 🐘 modelo grande, 🧩 MoE, 🛡️ seguro).")
+        self.lbl_desc_perfil.pack(anchor="w", padx=12, pady=(0, 6))
         self._crear_label_dim(
             panel_perfiles,
             "Escribe un nombre nuevo (o elige uno existente) y presiona 'Guardar' para\n"
@@ -1144,6 +1331,16 @@ class AppAgentesia:
         self.entrada_moe_n.grid(row=1, column=1, sticky="w", padx=(8, 0), pady=4)
         self._actualizar_estado_moe()
 
+        self._crear_label_dim(
+            panel_moe,
+            "Atajo para modelos grandes y rápidos (ej. NVIDIA Nemotron 3 Nano 30B, Qwen 35B-A3B):\n"
+            "activa el ajuste automático de contexto a la VRAM (con margen de seguridad), la caché\n"
+            "KV cuantizada y el reparto automático de capas, para que el motor decida qué entra en\n"
+            "la GPU y qué va a la RAM. Solo toca esas opciones; luego puedes afinarlas a mano.",
+        ).pack(anchor="w", padx=12, pady=(0, 6))
+        self._crear_boton(panel_moe, "⚡ Preset: modelo grande rápido", self.aplicar_preset_modelo_grande).pack(
+            anchor="w", padx=12, pady=(0, 12))
+
         panel_vision = self._crear_panel(contenido, "👁️ Modelo de visión (opcional)")
         self._crear_label_dim(
             panel_vision,
@@ -1203,6 +1400,92 @@ class AppAgentesia:
             "trabajo si falla. Un umbral de aceptación más alto exige que el modelo grande\n"
             "esté más seguro para aceptar lo adivinado (menos errores, menos velocidad).",
         ).pack(anchor="w", padx=12, pady=(0, 12))
+
+        # ---------- Muestreo y anti-bucles (+ presupuesto de razonamiento) ----------
+        panel_muestreo = self._crear_panel(contenido, "🎚️ Muestreo y anti-bucles (opcional)")
+        self._crear_label_dim(
+            panel_muestreo,
+            "Controla qué tan creativo o repetitivo es el modelo. Si se queda en bucles\n"
+            "(repite la misma frase sin parar), prueba el preset 'Anti-bucles'. Los clientes\n"
+            "(Cline, Continue...) pueden mandar sus propios valores y ganarle a estos.",
+        ).pack(anchor="w", padx=12, pady=(0, 8))
+        fila_presets_m = tk.Frame(panel_muestreo)
+        fila_presets_m.pack(fill=tk.X, padx=12, pady=(0, 8))
+        self._widgets_panel.append(("panel", fila_presets_m))
+        for nombre_preset in PRESETS_MUESTREO:
+            self._crear_boton(
+                fila_presets_m, nombre_preset, lambda n=nombre_preset: self.aplicar_preset_muestreo(n),
+            ).pack(side=tk.LEFT, padx=(0, 6))
+        grid_m = tk.Frame(panel_muestreo)
+        grid_m.pack(fill=tk.X, padx=6, pady=(0, 6))
+        self._widgets_panel.append(("panel", grid_m))
+        campos_m = [
+            ("Temperatura:", self.var_temp, ["", "0.2", "0.4", "0.6", "0.8", "1.0"]),
+            ("Top-p:", self.var_top_p, ["", "0.8", "0.9", "0.95", "1.0"]),
+            ("Top-k:", self.var_top_k, ["", "20", "40", "64"]),
+            ("Min-p:", self.var_min_p, ["", "0.0", "0.05", "0.1"]),
+            ("Penaliz. repetición:", self.var_repeat_penalty, ["", "1.0", "1.05", "1.1", "1.15", "1.2"]),
+            ("Penaliz. presencia:", self.var_presence_penalty, ["", "0.0", "0.5", "1.0", "1.5"]),
+            ("DRY (anti-bucles):", self.var_dry, ["", "0.4", "0.8", "1.2"]),
+            ("Razonamiento (tokens):", self.var_reasoning_budget, ["", "0", "512", "1024", "2048", "4096"]),
+        ]
+        for i, (etiqueta, variable, valores) in enumerate(campos_m):
+            fila, col = divmod(i, 2)
+            self._crear_label_card(grid_m, etiqueta).grid(row=fila, column=col * 2, sticky="w", padx=(12, 6), pady=5)
+            ttk.Combobox(grid_m, textvariable=variable, values=valores, width=9).grid(
+                row=fila, column=col * 2 + 1, sticky="w", padx=(0, 18), pady=5)
+        self._crear_label_dim(
+            panel_muestreo,
+            "Vacío = valor por defecto del motor. 'DRY' castiga las frases que se repiten\n"
+            "(0.8 es lo habitual). 'Razonamiento' limita cuántos tokens puede 'pensar' un\n"
+            "modelo con razonamiento antes de responder (0 = no pensar; vacío = sin límite),\n"
+            "útil cuando un modelo se agota pensando y deja la respuesta vacía.",
+        ).pack(anchor="w", padx=12, pady=(0, 12))
+
+        # ---------- Extender contexto (YaRN) ----------
+        panel_yarn = self._crear_panel(contenido, "📏 Extender el contexto más allá del entrenamiento (YaRN)")
+        self._crear_label_dim(
+            panel_yarn,
+            "Cada modelo se entrena con un contexto máximo (ej. 32k). YaRN le permite usar el\n"
+            "doble o el cuádruple con poca pérdida de calidad. Actívalo solo si necesitas más\n"
+            "contexto del nativo (y sube 'Contexto' arriba); en textos cortos puede bajar un poco\n"
+            "la precisión. Va junto con TurboQuant para que la caché no consuma toda la VRAM.",
+        ).pack(anchor="w", padx=12, pady=(0, 8))
+        fila_yarn = tk.Frame(panel_yarn)
+        fila_yarn.pack(fill=tk.X, padx=12, pady=(0, 12))
+        self._widgets_panel.append(("panel", fila_yarn))
+        self._crear_label_card(fila_yarn, "Modo:").pack(side=tk.LEFT, padx=(0, 6))
+        ttk.Combobox(fila_yarn, textvariable=self.var_rope_modo, state="readonly", width=12,
+                     values=["Ninguno", "YaRN ×2", "YaRN ×4"]).pack(side=tk.LEFT, padx=(0, 18))
+        self._crear_label_card(fila_yarn, "Contexto original del modelo (opcional):").pack(side=tk.LEFT, padx=(0, 6))
+        ttk.Entry(fila_yarn, textvariable=self.var_yarn_orig, width=10).pack(side=tk.LEFT)
+
+        # ---------- Dispositivos de calculo ----------
+        panel_disp = self._crear_panel(contenido, "🖥️ Dispositivos de cálculo (GPU dedicada, integrada o varias GPU)")
+        self._crear_label_dim(
+            panel_disp,
+            "Por defecto llama.cpp elige solo. Aquí puedes forzar cuáles usar (ej. CUDA0, o\n"
+            "Vulkan1 para una GPU integrada) y cómo repartir el modelo entre varias GPU\n"
+            "(ej. 3,1). Usa 'Ver dispositivos' para ver los nombres exactos en tu PC.",
+        ).pack(anchor="w", padx=12, pady=(0, 8))
+        grid_disp = tk.Frame(panel_disp)
+        grid_disp.pack(fill=tk.X, pady=(0, 4))
+        self._widgets_panel.append(("panel", grid_disp))
+        self._crear_entry_config(grid_disp, "Dispositivos (-dev):", self.var_dispositivos, 0, ancho=24)
+        self._crear_entry_config(grid_disp, "Reparto entre GPU (-ts):", self.var_tensor_split, 1, ancho=24)
+        self._crear_label_card(grid_disp, "Modo de reparto (-sm):").grid(row=2, column=0, sticky="w", padx=12, pady=6)
+        ttk.Combobox(grid_disp, textvariable=self.var_split_mode, state="readonly", width=21,
+                     values=["", "layer", "row", "tensor", "none"]).grid(row=2, column=1, sticky="w", padx=12, pady=6)
+        self._crear_entry_config(grid_disp, "GPU principal (-mg):", self.var_main_gpu, 3, ancho=24)
+        self._crear_label_dim(
+            panel_disp,
+            "Con dos o más GPU: 'layer' (por defecto) reparte capas en secuencia; 'row' reparte\n"
+            "cada capa por filas; 'tensor' reparte pesos y caché entre las GPU y trabajan en\n"
+            "paralelo (EXPERIMENTAL, suele dar más velocidad con modelos grandes/MoE). 'none'\n"
+            "usa una sola GPU. Vacío = el motor decide. Con una sola GPU no hace falta tocarlo.",
+        ).pack(anchor="w", padx=12, pady=(0, 6))
+        self._crear_boton(panel_disp, "🔍 Ver dispositivos disponibles", self.listar_dispositivos).pack(
+            anchor="w", padx=12, pady=(4, 12))
 
         panel_tools = self._crear_panel(contenido, "🔎 Herramientas para el modelo")
         self.chk_busqueda_web = tk.Checkbutton(
@@ -1265,9 +1548,9 @@ class AppAgentesia:
         self._widgets_panel.append(("panel", fila_presets))
         self._botones_preset = []
         for nombre_preset in PRESETS_TURBOQUANT:
-            b = tk.Button(
-                fila_presets, text=nombre_preset, font=("Segoe UI", 8), relief="flat", bd=0, cursor="hand2",
-                padx=6, pady=4, command=lambda p=nombre_preset: self.aplicar_preset_turboquant(p),
+            b = BotonRedondo(
+                fila_presets, text=nombre_preset, font=("Segoe UI", 9), padx=12, pady=5, radio=9,
+                command=lambda p=nombre_preset: self.aplicar_preset_turboquant(p),
             )
             b.pack(side=tk.LEFT, padx=(0, 6))
             self._botones_preset.append(b)
@@ -1395,7 +1678,9 @@ class AppAgentesia:
         for p in self.proveedores_nube:
             self.lista_proveedores.insert(tk.END, f"{p.get('nombre')}  ·  {p.get('tipo')}  ·  {p.get('modelo')}")
         t = self.tema
-        self.lista_proveedores.configure(bg=t["panel"], fg=t["texto"], selectbackground=t["acento"], selectforeground=t["acento_texto"])
+        self.lista_proveedores.configure(bg=mezclar(t["panel"], t["bg"], 0.65), fg=t["texto"], selectbackground=t["acento"],
+                                         selectforeground=t["acento_texto"], highlightbackground=t["borde"],
+                                         highlightcolor=t["acento"], highlightthickness=1, relief="flat", bd=0)
         self._refrescar_combo_proveedor_chat()
 
     def _refrescar_combo_proveedor_chat(self):
@@ -1546,6 +1831,15 @@ class AppAgentesia:
         self.lbl_estado_chat.config(text=f"⏳ Esperando respuesta del modelo{puntos}  ({segundos}s — los modelos 'thinking' pueden tardar varios minutos)")
         self.root.after(1000, lambda: self._tick_espera_chat(segundos + 1))
 
+    def _temperatura_chat(self):
+        """Temperatura del Chat/Playground local: la del panel de muestreo si
+        se puso una valida, o 0.3 (respuestas estables) por defecto."""
+        try:
+            texto = self.var_temp.get().strip()
+            return float(texto) if texto else 0.3
+        except ValueError:
+            return 0.3
+
     def _enviar_chat(self, mensaje):
         proveedor_elegido = self.var_proveedor_chat.get()
         if proveedor_elegido and proveedor_elegido != "Local (llama.cpp)":
@@ -1598,7 +1892,7 @@ class AppAgentesia:
                     # antes de responder, ej. Agents-A1-4B) pueden agotar el limite de
                     # tokens mientras todavia estan pensando y dejar la respuesta vacia.
                     "max_tokens": 1536,
-                    "temperature": 0.3,
+                    "temperature": self._temperatura_chat(),
                 }
                 if herramientas:
                     cuerpo_peticion["tools"] = herramientas
@@ -2289,31 +2583,60 @@ class AppAgentesia:
         self.header_canvas.configure(bg=t["bg"])
         self._redibujar_header()
 
+        # ttk (campos, listas desplegables, barras de scroll): planos y finos,
+        # con borde de una linea del color de la tarjeta, como en macOS.
+        campo = mezclar(t["panel"], t["bg"], 0.65)
         self.style.configure(".", background=t["bg"], foreground=t["texto"])
-        self.style.configure("TEntry", fieldbackground=t["panel"], foreground=t["texto"], insertcolor=t["texto"], padding=4)
-        self.style.map("TEntry", fieldbackground=[("readonly", t["panel"])], foreground=[("readonly", t["texto_dim"])])
-        self.style.configure("TCombobox", fieldbackground=t["panel"], background=t["panel"], foreground=t["texto"], arrowcolor=t["texto"], padding=4)
-        self.style.map("TCombobox", fieldbackground=[("readonly", t["panel"])], foreground=[("readonly", t["texto"])])
-        self.style.configure("TScrollbar", background=t["panel"], troughcolor=t["bg"], bordercolor=t["bg"], arrowcolor=t["texto_dim"])
+        self.style.configure("TEntry", fieldbackground=campo, foreground=t["texto"], insertcolor=t["texto"],
+                             bordercolor=t["borde"], lightcolor=t["borde"], darkcolor=t["borde"], padding=6, relief="flat")
+        self.style.map("TEntry", fieldbackground=[("readonly", campo)], foreground=[("readonly", t["texto_dim"])],
+                       bordercolor=[("focus", t["acento"])], lightcolor=[("focus", t["acento"])], darkcolor=[("focus", t["acento"])])
+        self.style.configure("TCombobox", fieldbackground=campo, background=campo, foreground=t["texto"],
+                             arrowcolor=t["texto_dim"], bordercolor=t["borde"], lightcolor=t["borde"],
+                             darkcolor=t["borde"], padding=6, relief="flat", arrowsize=14)
+        self.style.map("TCombobox", fieldbackground=[("readonly", campo)], foreground=[("readonly", t["texto"])],
+                       bordercolor=[("focus", t["acento"])], lightcolor=[("focus", t["acento"])],
+                       darkcolor=[("focus", t["acento"])], background=[("active", campo)])
+        self.root.option_add("*TCombobox*Listbox.background", t["panel"])
+        self.root.option_add("*TCombobox*Listbox.foreground", t["texto"])
+        self.root.option_add("*TCombobox*Listbox.selectBackground", t["acento"])
+        self.root.option_add("*TCombobox*Listbox.selectForeground", t["acento_texto"])
+        # Scrollbar fina sin flechas (como las barras overlay de macOS).
+        self.style.layout("Vertical.TScrollbar", [("Vertical.Scrollbar.trough", {"sticky": "ns", "children": [
+            ("Vertical.Scrollbar.thumb", {"expand": "1", "sticky": "nswe"})]})])
+        self.style.configure("Vertical.TScrollbar", background=mezclar(t["borde"], t["texto_dim"], 0.35),
+                             troughcolor=t["bg"], bordercolor=t["bg"], lightcolor=t["bg"], darkcolor=t["bg"],
+                             gripcount=0, arrowsize=0, width=10)
+        self.style.map("Vertical.TScrollbar", background=[("active", t["texto_dim"])])
 
+        color_sidebar = self._color_sidebar()
         for tipo, w in self._widgets_panel:
             try:
                 if tipo == "bg":
                     w.configure(bg=t["bg"])
                 elif tipo == "panel":
                     w.configure(bg=t["panel"])
+                elif tipo == "sidebar":
+                    w.configure(bg=color_sidebar)
+                elif tipo == "borde":
+                    w.configure(bg=t["borde"])
                 elif tipo == "panel_borde":
-                    w.configure(bg=t["panel"], highlightbackground=t["borde"], highlightcolor=t["borde"])
+                    w.configure(bg=t["panel"], highlightbackground=t["borde"], highlightcolor=t["borde"],
+                                highlightthickness=1, bd=0, relief="flat")
                 elif tipo == "check":
-                    w.configure(bg=t["panel"], fg=t["texto"], activebackground=t["panel"], activeforeground=t["texto"], selectcolor=t["bg"])
+                    w.configure(bg=t["panel"], fg=t["texto"], activebackground=t["panel"], activeforeground=t["texto"],
+                                selectcolor=t["panel"], highlightthickness=0)
+                elif tipo == "check_bg":  # checkbox que vive sobre el fondo de la pagina, no en una tarjeta
+                    w.configure(bg=t["bg"], fg=t["texto"], activebackground=t["bg"], activeforeground=t["texto"],
+                                selectcolor=t["panel"], highlightthickness=0)
             except tk.TclError:
                 pass
 
         for widget, fondo_clave, dim, subtitulo in self._widgets_texto:
             try:
-                bg = t["panel"] if fondo_clave == "panel" else t["bg"]
+                bg = {"panel": t["panel"], "sidebar": color_sidebar}.get(fondo_clave, t["bg"])
                 if subtitulo:
-                    fg = t["acento_hover"]
+                    fg = t["texto"]
                 elif dim:
                     fg = t["texto_dim"]
                 else:
@@ -2327,46 +2650,37 @@ class AppAgentesia:
         except (AttributeError, tk.TclError):
             pass
 
-        # Botones principales
-        self.btn_iniciar.configure(bg=t["acento"], fg=t["acento_texto"], activebackground=t["acento_hover"], activeforeground=t["acento_texto"])
-        self.btn_detener.configure(bg=t["panel"], fg=t["peligro"], activebackground=t["borde"], activeforeground=t["peligro"])
-        self.btn_agentes.configure(bg=t["acento"], fg=t["acento_texto"], activebackground=t["acento_hover"], activeforeground=t["acento_texto"])
-        self.btn_copiar.configure(bg=t["borde"], fg=t["texto"], activebackground=t["acento"], activeforeground=t["acento_texto"])
-        self._boton_reset_tema.configure(bg=t["panel"], fg=t["texto_dim"], activebackground=t["borde"])
-        self.btn_enviar_chat.configure(bg=t["acento"], fg=t["acento_texto"], activebackground=t["acento_hover"], activeforeground=t["acento_texto"])
+        # Botones principales (primario = acento, secundario = gris suave, peligro = rojo suave)
+        self.btn_iniciar.configure(**self._est_primario())
+        self.btn_detener.configure(**self._est_peligro())
+        self.btn_agentes.configure(**self._est_primario())
+        self.btn_copiar.configure(**self._est_secundario())
+        self._boton_reset_tema.configure(**self._est_secundario())
+        self.btn_enviar_chat.configure(**self._est_primario())
 
         if hasattr(self, "btn_tunel"):
-            self.btn_tunel.configure(bg=t["acento"], fg=t["acento_texto"], activebackground=t["acento_hover"])
-            self.btn_tunel_detener.configure(bg=t["panel"], fg=t["peligro"], activebackground=t["borde"])
+            self.btn_tunel.configure(**self._est_primario())
+            self.btn_tunel_detener.configure(**self._est_peligro())
 
         if hasattr(self, "lista_carpetas"):
             self._refrescar_lista_carpetas()
 
         if hasattr(self, "lista_resultados_hf"):
-            self.lista_resultados_hf.configure(bg=t["panel"], fg=t["texto"], selectbackground=t["acento"], selectforeground=t["acento_texto"])
-            self.btn_buscar_hf.configure(bg=t["acento"], fg=t["acento_texto"], activebackground=t["acento_hover"])
-            self.btn_descargar_hf.configure(bg=t["acento"], fg=t["acento_texto"], activebackground=t["acento_hover"])
+            self.lista_resultados_hf.configure(bg=t["panel"], fg=t["texto"], selectbackground=t["acento"],
+                                               selectforeground=t["acento_texto"], highlightthickness=0, bd=0)
+            self.btn_buscar_hf.configure(**self._est_primario())
+            self.btn_descargar_hf.configure(**self._est_primario())
 
         for b in getattr(self, "_botones_preset", []):
-            b.configure(bg=t["borde"], fg=t["texto"], activebackground=t["acento"], activeforeground=t["acento_texto"])
+            b.configure(**self._est_secundario())
 
         for clave, sw in getattr(self, "_swatches_custom", {}).items():
             sw.configure(bg=t.get(clave, "#000000"), highlightbackground=t["borde"])
 
         if hasattr(self, "btn_modo_dia"):
             noche = self._modo_noche_actual()
-            activo_bg, activo_fg = t["acento"], t["acento_texto"]
-            inactivo_bg, inactivo_fg = t["borde"], t["texto"]
-            self.btn_modo_dia.configure(
-                bg=inactivo_bg if noche else activo_bg,
-                fg=inactivo_fg if noche else activo_fg,
-                activebackground=t["acento_hover"], activeforeground=t["acento_texto"],
-            )
-            self.btn_modo_noche.configure(
-                bg=activo_bg if noche else inactivo_bg,
-                fg=activo_fg if noche else inactivo_fg,
-                activebackground=t["acento_hover"], activeforeground=t["acento_texto"],
-            )
+            self.btn_modo_dia.configure(**(self._est_secundario() if noche else self._est_primario()))
+            self.btn_modo_noche.configure(**(self._est_primario() if noche else self._est_secundario()))
 
         # Botones "copiar config" y sidebar (buscados por texto no es practico; recorremos todo)
         self._recolorear_botones_genericos(self.area_contenido)
@@ -2379,26 +2693,24 @@ class AppAgentesia:
             self._actualizar_color_estado()
 
         if hasattr(self, "_botones_sidebar"):
-            for k, b in self._botones_sidebar.items():
-                if self._paginas.get(k) and self._paginas[k].winfo_ismapped():
-                    b.configure(bg=t["acento"], fg=t["acento_texto"])
-                else:
-                    b.configure(bg=t["panel"], fg=t["texto"])
+            self._estilo_sidebar()
+
+        # Repinta las tarjetas redondeadas con los colores nuevos.
+        self._repintar_tarjetas()
 
     def _recolorear_botones_genericos(self, contenedor, es_sidebar=False):
-        t = self.tema
         botones_ya_manejados = {
             id(getattr(self, n, None)) for n in
             ["btn_iniciar", "btn_detener", "btn_agentes", "btn_copiar", "_boton_reset_tema",
-             "btn_enviar_chat", "btn_tunel", "btn_tunel_detener"]
+             "btn_enviar_chat", "btn_tunel", "btn_tunel_detener", "btn_modo_dia", "btn_modo_noche"]
         }
         for w in contenedor.winfo_children():
-            if isinstance(w, tk.Button) and id(w) not in botones_ya_manejados and w not in self._botones_sidebar.values():
+            if (isinstance(w, (tk.Button, BotonRedondo)) and id(w) not in botones_ya_manejados
+                    and w not in self._botones_sidebar.values()):
                 try:
-                    if es_sidebar:
-                        pass
-                    else:
-                        w.configure(bg=t["borde"], fg=t["texto"], activebackground=t["acento"], activeforeground=t["acento_texto"])
+                    if not es_sidebar:
+                        estilo = self._est_primario() if getattr(w, "_primario", False) else self._est_secundario()
+                        w.configure(**estilo)
                 except tk.TclError:
                     pass
             self._recolorear_botones_genericos(w, es_sidebar=es_sidebar)
@@ -2444,6 +2756,50 @@ class AppAgentesia:
             self.var_kv_k.set("f16")
             self.var_kv_v.set("f16")
 
+    def aplicar_preset_muestreo(self, nombre_preset):
+        p = PRESETS_MUESTREO[nombre_preset]
+        self.var_temp.set(p["temp"])
+        self.var_top_p.set(p["top_p"])
+        self.var_top_k.set(p["top_k"])
+        self.var_min_p.set(p["min_p"])
+        self.var_repeat_penalty.set(p["repeat"])
+        self.var_presence_penalty.set(p["presence"])
+        self.var_dry.set(p["dry"])
+        self.var_reasoning_budget.set(p["reasoning"])
+        self._set_estado(f"🎚️ Muestreo '{nombre_preset}' aplicado (se usa al cargar el modelo).", "ok")
+
+    def aplicar_preset_modelo_grande(self):
+        """Config para modelos grandes (tipicamente MoE con pocos parametros
+        activos, como Nemotron 3 Nano 30B): contexto automatico dentro de la
+        VRAM libre + cache KV q8_0 + Flash Attention + capas en GPU 'auto'."""
+        self.var_auto_fit.set(True)
+        self.var_fit_margen.set("512")
+        self.var_ngl.set("auto")
+        self.var_turboquant.set(True)
+        self.var_kv_k.set("q8_0")
+        self.var_kv_v.set("q8_0")
+        self._al_cambiar_turboquant()
+        self._set_estado("⚡ Preset 'modelo grande rápido' aplicado: contexto auto + margen 512 MB + caché KV q8_0.", "ok")
+
+    def listar_dispositivos(self):
+        """Muestra los dispositivos que ve llama.cpp (CUDA, Vulkan, CPU...)
+        ejecutando 'llama-server.exe --list-devices' sin bloquear la ventana."""
+        ruta = self.var_ruta_llama_server.get()
+        if not os.path.isfile(ruta):
+            messagebox.showwarning("Dispositivos", "Primero indica dónde está llama-server.exe (arriba).")
+            return
+
+        def _trabajo():
+            try:
+                r = subprocess.run([ruta, "--list-devices"], capture_output=True, text=True, timeout=60,
+                                   creationflags=subprocess.CREATE_NO_WINDOW, cwd=os.path.dirname(ruta))
+                texto = (r.stdout + "\n" + r.stderr).strip() or "(sin salida)"
+            except Exception as e:
+                texto = f"No se pudo ejecutar: {e}"
+            self.root.after(0, lambda: messagebox.showinfo("Dispositivos disponibles", texto[-1800:]))
+
+        threading.Thread(target=_trabajo, daemon=True).start()
+
     def aplicar_preset_turboquant(self, nombre_preset):
         preset = PRESETS_TURBOQUANT[nombre_preset]
         self.var_turboquant.set(preset["activar"])
@@ -2468,8 +2824,10 @@ class AppAgentesia:
             existe = "" if os.path.isdir(carpeta) else "  ⚠ no encontrada"
             self.lista_carpetas.insert(tk.END, f"{carpeta}{existe}")
         t = self.tema
-        self.lista_carpetas.configure(bg=t["panel"], fg=t["texto"], selectbackground=t["acento"],
-                                       selectforeground=t["acento_texto"], highlightbackground=t["borde"])
+        self.lista_carpetas.configure(bg=mezclar(t["panel"], t["bg"], 0.65), fg=t["texto"], selectbackground=t["acento"],
+                                       selectforeground=t["acento_texto"], highlightbackground=t["borde"],
+                                       highlightcolor=t["acento"], highlightthickness=1, relief="flat", bd=0,
+                                       font=("Segoe UI", 9))
 
     def cambiar_ruta_llama_server(self):
         ruta = filedialog.askopenfilename(
@@ -2526,6 +2884,20 @@ class AppAgentesia:
             "models_autoload": self.var_models_autoload,
             "api_key": self.var_api_key,
             "cors_origins": self.var_cors_origins,
+            "temperatura": self.var_temp,
+            "top_p": self.var_top_p,
+            "top_k": self.var_top_k,
+            "min_p": self.var_min_p,
+            "repeat_penalty": self.var_repeat_penalty,
+            "presence_penalty": self.var_presence_penalty,
+            "dry": self.var_dry,
+            "reasoning_budget": self.var_reasoning_budget,
+            "rope_modo": self.var_rope_modo,
+            "yarn_orig": self.var_yarn_orig,
+            "dispositivos": self.var_dispositivos,
+            "tensor_split": self.var_tensor_split,
+            "split_mode": self.var_split_mode,
+            "main_gpu": self.var_main_gpu,
             "timeout": self.var_timeout,
             "modo_fx": self.var_modo_fx,
         }
@@ -2539,6 +2911,10 @@ class AppAgentesia:
             nombre = nombre.strip()
         if not nombre:
             return
+        if nombre in PERFILES_INCLUIDOS:
+            messagebox.showinfo("Perfiles", "Ese nombre es de un perfil incluido (★). Escribe otro nombre\n"
+                                            "para guardar tu propia versión.")
+            return
         datos = {clave: var.get() for clave, var in self._campos_perfil().items()}
         self.perfiles_guardados[nombre] = datos
         guardar_perfiles(self.perfiles_guardados)
@@ -2548,7 +2924,10 @@ class AppAgentesia:
 
     def cargar_perfil_seleccionado(self):
         nombre = self.var_perfil_actual.get()
-        datos = self.perfiles_guardados.get(nombre)
+        if nombre in PERFILES_INCLUIDOS:
+            datos = PERFILES_INCLUIDOS[nombre]["valores"]
+        else:
+            datos = self.perfiles_guardados.get(nombre)
         if not datos:
             messagebox.showwarning("Perfiles", "Elige un perfil guardado de la lista.")
             return
@@ -2570,6 +2949,10 @@ class AppAgentesia:
 
     def eliminar_perfil_seleccionado(self):
         nombre = self.var_perfil_actual.get()
+        if nombre in PERFILES_INCLUIDOS:
+            messagebox.showinfo("Perfiles", "Los perfiles con ★ vienen incluidos y no se pueden eliminar.\n"
+                                            "Puedes guardar una copia con otro nombre y borrar esa.")
+            return
         if not nombre or nombre not in self.perfiles_guardados:
             messagebox.showwarning("Perfiles", "Elige un perfil guardado de la lista.")
             return
@@ -2581,9 +2964,23 @@ class AppAgentesia:
         self._refrescar_combo_perfiles()
         self._set_estado(f"🗑 Perfil eliminado.", "ok")
 
+    def _nombres_perfiles(self):
+        """Primero los incluidos (con ★), despues los que guardo el usuario."""
+        return list(PERFILES_INCLUIDOS.keys()) + list(self.perfiles_guardados.keys())
+
     def _refrescar_combo_perfiles(self):
         if hasattr(self, "combo_perfiles"):
-            self.combo_perfiles["values"] = list(self.perfiles_guardados.keys())
+            self.combo_perfiles["values"] = self._nombres_perfiles()
+
+    def _al_elegir_perfil(self):
+        """Los perfiles incluidos se aplican al elegirlos (un solo clic) y
+        muestran para que sirven; los del usuario se cargan con 'Cargar'."""
+        nombre = self.var_perfil_actual.get()
+        if nombre in PERFILES_INCLUIDOS:
+            self.lbl_desc_perfil.config(text=PERFILES_INCLUIDOS[nombre]["descripcion"])
+            self.cargar_perfil_seleccionado()
+        else:
+            self.lbl_desc_perfil.config(text="")
 
     # ==================================================================
     # MODO FX: rutinas nativas AVX + FMA4 (AMD Family 15h, ej. FX-8320E)
@@ -2865,10 +3262,9 @@ class AppAgentesia:
             # elegido arriba, y al llenarse hace "context shift" a mitad de
             # la respuesta -> el modelo pierde el hilo y repite texto en bucle.
             "-np", "1",
-            # Penalizacion de repeticion: el servidor trae repeat_penalty=1
-            # (desactivada) por defecto, asi que si el modelo empieza a
-            # repetirse nada lo frena. Cline tampoco manda este parametro.
-            "--repeat-penalty", "1.1",
+            # Ventana de la penalizacion de repeticion (la penalizacion en si
+            # se agrega mas abajo desde el panel "Muestreo y anti-bucles": el
+            # servidor trae repeat_penalty=1 = desactivada, y Cline no la manda).
             "--repeat-last-n", "256",
             "--host", host,
             "--port", str(puerto),
@@ -2883,6 +3279,41 @@ class AppAgentesia:
                 comando += ["--fit-target", margen]
         else:
             comando += ["-c", self.var_contexto.get()]
+
+        # Muestreo y anti-bucles (solo se manda lo que tenga valor).
+        for bandera, variable in [
+            ("--temp", self.var_temp), ("--top-p", self.var_top_p), ("--top-k", self.var_top_k),
+            ("--min-p", self.var_min_p), ("--repeat-penalty", self.var_repeat_penalty),
+            ("--presence-penalty", self.var_presence_penalty), ("--dry-multiplier", self.var_dry),
+            ("--reasoning-budget", self.var_reasoning_budget),
+        ]:
+            valor = variable.get().strip()
+            if valor:
+                comando += [bandera, valor]
+
+        # Extender contexto con YaRN (RoPE).
+        modo_rope = self.var_rope_modo.get()
+        if modo_rope.startswith("YaRN"):
+            factor = "4" if "4" in modo_rope else "2"
+            comando += ["--rope-scaling", "yarn", "--rope-scale", factor]
+            yarn_orig = self.var_yarn_orig.get().strip()
+            if yarn_orig:
+                comando += ["--yarn-orig-ctx", yarn_orig]
+
+        # Dispositivos de calculo / reparto entre GPU.
+        dispositivos = self.var_dispositivos.get().strip()
+        if dispositivos:
+            comando += ["--device", dispositivos]
+        reparto = self.var_tensor_split.get().strip()
+        if reparto:
+            comando += ["--tensor-split", reparto]
+        modo_reparto = self.var_split_mode.get().strip()
+        if modo_reparto:
+            comando += ["--split-mode", modo_reparto]
+        gpu_principal = self.var_main_gpu.get().strip()
+        if gpu_principal:
+            comando += ["--main-gpu", gpu_principal]
+
         hilos = self.var_threads.get().strip()
         if hilos:
             comando += ["-t", hilos]

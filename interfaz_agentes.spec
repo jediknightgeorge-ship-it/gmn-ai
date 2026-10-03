@@ -16,7 +16,16 @@ a = Analysis(
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
-    excludes=[],
+    # Nuestro programa nunca activa memoria/RAG en CrewAI (Crew() se llama sin
+    # memory=True ni embedder), asi que estas dependencias pesadas que CrewAI
+    # arrastra por defecto no hacen falta y se excluyen para que el .exe pese
+    # una fraccion de lo que pesaba (torch solo son ~3.5GB de los ~4.1GB
+    # totales). Si algo de esto resulta necesario en el futuro (ej. se activa
+    # memoria en un Crew), hay que quitarlo de esta lista.
+    excludes=[
+        'torch', 'torchvision', 'torchaudio',
+        'transformers', 'sentence_transformers',
+    ],
     noarchive=False,
     optimize=0,
 )

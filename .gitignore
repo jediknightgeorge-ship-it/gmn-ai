@@ -1,0 +1,12 @@
+__pycache__/
+*.pyc
+tema_config.json
+perfiles_config.json
+proveedores_nube.json
+carpetas_modelos.json
+ruta_llama_server.json
+mcp_busqueda_web.json
+build/
+dist/
+*.zip
+*.gguf

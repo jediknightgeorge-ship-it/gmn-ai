@@ -54,8 +54,26 @@ Funciones principales
 - Proveedores en la nube: conecta OpenAI, Anthropic (Claude) u otro
   compatible con tu propia API key, para usarlos junto a tus modelos
   locales desde la misma ventana de chat.
+- Muestreo y anti-bucles: temperatura, top-p/top-k/min-p, penalizaciones
+  de repetición/presencia y DRY, con presets listos ("Anti-bucles",
+  "Código preciso", "Creativo"), para frenar las repeticiones infinitas
+  de los modelos pequeños.
+- Presupuesto de razonamiento (--reasoning-budget): limita cuántos tokens
+  "piensa" un modelo con razonamiento antes de responder.
+- Extender el contexto más allá del entrenamiento con YaRN (x2 / x4).
+- Elegir dispositivos de cálculo (--device), repartir entre varias GPU
+  (--tensor-split) y ver los dispositivos disponibles (GPU dedicada,
+  integrada, Vulkan, CUDA...).
+- Preset "modelo grande rápido" para modelos tipo MoE (ej. Nemotron 3
+  Nano 30B, Qwen 35B-A3B): contexto automático dentro de la VRAM libre,
+  caché KV cuantizada y reparto automático de capas.
 - Perfiles de configuración guardables (cargar/guardar toda la
-  configuración de una página con un clic).
+  configuración de una página con un clic) y 5 perfiles incluidos de un
+  clic: Rápido en mi GPU, Gran contexto y rápido, Modelo grande (solo lo
+  que cabe en la GPU), Modelo MoE grande (expertos en la RAM) y Seguro
+  (no saturar la VRAM).
+- Diseño estilo Apple: tarjetas y botones redondeados, barra lateral,
+  y selector Día/Noche rápido en el encabezado.
 - Monitor en vivo de GPU, VRAM, CPU y RAM.
 - Descarga de modelos directo desde Hugging Face, con confirmación
   antes de bajar cualquier archivo.
