@@ -13,7 +13,7 @@ can talk to it. Everything runs on your own PC; nothing leaves it unless you tur
 
 ## Download
 
-Get **`GMN_AI_v1.1.0.zip`** from the [Releases page](https://github.com/jediknightgeorge-ship-it/gmn-ai/releases/latest),
+Get **`GMN_AI_v1.1.1.zip`** from the [Releases page](https://github.com/jediknightgeorge-ship-it/gmn-ai/releases/latest),
 unzip it anywhere and run `interfaz_agentes.exe`. No installer, no Python needed.
 
 You also need **your own `llama-server.exe`** (the app does not bundle llama.cpp). Download the build that matches
@@ -42,7 +42,7 @@ You can also save your own profiles with 💾 *Guardar*.
 | ⚡ **Fast on my GPU** | Whole model on the GPU, 8k context, quantized KV cache | The model fits in your VRAM |
 | 📚 **Big context, fast** | The engine computes the largest context that fits in your *free* VRAM, leaving a safety margin (default 0.5 GB) | You want a long context without running out of VRAM |
 | 🐘 **Big model (only what fits on the GPU)** | Puts as many layers as fit on the GPU and leaves the rest in RAM, automatic context | The model is bigger than your VRAM (speed is then limited by your RAM/CPU) |
-| 🧩 **Big MoE model (experts in RAM)** | Shared layers on the GPU, the "experts" stay in RAM so only what is needed is used | Mixture-of-Experts models (Nemotron 3 Nano 30B, Qwen 35B-A3B…) |
+| 🧩 **Big MoE model (experts in RAM)** | Shared layers on the GPU, the "experts" stay in RAM so only what is needed is used; large batches (`-b 2048 -ub 1024`) for much faster long-prompt reading | Mixture-of-Experts models (Nemotron 3 Nano 30B, Qwen 35B-A3B…) |
 | 🛡️ **Safe (don't saturate VRAM)** | 4k context, 1 GB VRAM margin, small batches | You use the PC for other things at the same time |
 
 ## Everything the app does

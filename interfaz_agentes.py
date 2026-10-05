@@ -279,9 +279,10 @@ PERFILES_INCLUIDOS = {
     },
     "★ 🧩 Modelo MoE grande (expertos en la RAM)": {
         "descripcion": "Para modelos MoE (Nemotron 3 Nano 30B, Qwen 35B-A3B...): lo compartido va a la GPU y\n"
-                       "los 'expertos' se quedan en la RAM, así se usa solo lo necesario. Si no es MoE, no cambia nada.",
+                       "los 'expertos' se quedan en la RAM, así se usa solo lo necesario. Lotes grandes (-ub 1024)\n"
+                       "para leer prompts largos mucho más rápido. Aquí manda la RAM, más que la VRAM.",
         "valores": dict(_BASE_RENDIMIENTO, contexto="16384", ngl="all", auto_fit=True, fit_margen="512",
-                        moe_modo="Todos los expertos en CPU (-cmoe)"),
+                        moe_modo="Todos los expertos en CPU (-cmoe)", batch_size="2048", ubatch_size="1024"),
     },
     "★ 🛡️ Seguro (no saturar la VRAM)": {
         "descripcion": "Contexto 4k, margen de 1 GB de VRAM libre y lotes chicos: para cuando usas la PC a la vez\n"
@@ -1253,7 +1254,9 @@ class AppAgentesia:
         self._crear_label_card(grid_perf, "Batch size (-b):").grid(row=1, column=0, sticky="w", padx=12, pady=6)
         ttk.Combobox(grid_perf, textvariable=self.var_batch_size, values=["", "256", "512", "1024", "2048"], width=15).grid(row=1, column=1, sticky="w", padx=12, pady=6)
         self._crear_label_card(grid_perf, "Ubatch size (-ub):").grid(row=2, column=0, sticky="w", padx=12, pady=6)
-        ttk.Combobox(grid_perf, textvariable=self.var_ubatch_size, values=["", "128", "256", "512"], width=15).grid(row=2, column=1, sticky="w", padx=12, pady=6)
+        ttk.Combobox(grid_perf, textvariable=self.var_ubatch_size, values=["", "128", "256", "512", "1024", "2048"], width=15).grid(row=2, column=1, sticky="w", padx=12, pady=6)
+        self._crear_label_card(grid_perf, "Tip: en modelos MoE grandes, un ubatch de 1024 o más acelera mucho la lectura del prompt\n"
+                                          "(ej. un prompt de 32k). Usa algo más de VRAM; con el auto-ajuste queda margen. Con MoE, la RAM manda más que la VRAM.").grid(row=4, column=0, columnspan=2, sticky="w", padx=12, pady=(0, 10))
         self._crear_label_card(grid_perf, "NUMA (--numa):").grid(row=3, column=0, sticky="w", padx=12, pady=(6, 12))
         ttk.Combobox(grid_perf, textvariable=self.var_numa, values=["ninguno", "distribute", "isolate", "numactl"], state="readonly", width=15).grid(row=3, column=1, sticky="w", padx=12, pady=(6, 12))
 
