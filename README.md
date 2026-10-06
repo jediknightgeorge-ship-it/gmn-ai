@@ -13,7 +13,7 @@ can talk to it. Everything runs on your own PC; nothing leaves it unless you tur
 
 ## Download
 
-Get **`GMN_AI_v1.1.1.zip`** from the [Releases page](https://github.com/jediknightgeorge-ship-it/gmn-ai/releases/latest),
+Get **`GMN_AI_v1.1.2.zip`** from the [Releases page](https://github.com/jediknightgeorge-ship-it/gmn-ai/releases/latest),
 unzip it anywhere and run `interfaz_agentes.exe`. No installer, no Python needed.
 
 You also need **your own `llama-server.exe`** (the app does not bundle llama.cpp). Download the build that matches

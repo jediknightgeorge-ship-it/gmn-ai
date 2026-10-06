@@ -673,6 +673,9 @@ class AppAgentesia:
         self.var_tipo_spec = tk.StringVar(value="Ninguna")
         self.var_spec_n_max = tk.StringVar(value="")
         self.var_spec_p_min = tk.StringVar(value="")
+        self.var_spec_draft_ngl = tk.StringVar(value="")
+        self.var_spec_draft_kv_k = tk.StringVar(value="")
+        self.var_spec_draft_kv_v = tk.StringVar(value="")
         self.var_moe_modo = tk.StringVar(value="Ninguno")
         self.var_moe_n_capas = tk.StringVar(value="")
         self.var_mmproj = tk.StringVar(value="")
@@ -1402,6 +1405,28 @@ class AppAgentesia:
             "más tokens por pasada = más rápido SI acierta seguido, pero desperdicia más\n"
             "trabajo si falla. Un umbral de aceptación más alto exige que el modelo grande\n"
             "esté más seguro para aceptar lo adivinado (menos errores, menos velocidad).",
+        ).pack(anchor="w", padx=12, pady=(0, 8))
+
+        # --- GPU layers + KV caché del modelo draft ---
+        fila_draft_gpu = tk.Frame(panel_spec)
+        fila_draft_gpu.pack(fill=tk.X, padx=12, pady=(0, 4))
+        self._widgets_panel.append(("panel", fila_draft_gpu))
+        self._crear_label_card(fila_draft_gpu, "GPU layers del modelo draft (--spec-draft-ngl):").grid(row=0, column=0, sticky="w", padx=(0, 8), pady=4)
+        ttk.Combobox(fila_draft_gpu, textvariable=self.var_spec_draft_ngl,
+                     values=["", "all", "0", "1", "4", "8", "16", "24", "32"], width=10).grid(row=0, column=1, sticky="w", pady=4)
+        self._crear_label_card(fila_draft_gpu, "KV caché del draft — K (--spec-draft-type-k):").grid(row=1, column=0, sticky="w", padx=(0, 8), pady=4)
+        ttk.Combobox(fila_draft_gpu, textvariable=self.var_spec_draft_kv_k,
+                     values=["", "f16", "q8_0", "q4_0"], width=10, state="readonly").grid(row=1, column=1, sticky="w", pady=4)
+        self._crear_label_card(fila_draft_gpu, "KV caché del draft — V (--spec-draft-type-v):").grid(row=2, column=0, sticky="w", padx=(0, 8), pady=4)
+        ttk.Combobox(fila_draft_gpu, textvariable=self.var_spec_draft_kv_v,
+                     values=["", "f16", "q8_0", "q4_0"], width=10, state="readonly").grid(row=2, column=1, sticky="w", pady=4)
+        self._crear_label_dim(
+            panel_spec,
+            "GPU layers del draft: cuántas capas del modelo chiquito van a la GPU. 'all' = todo\n"
+            "en la GPU (más rápido). Si lo dejas vacío el motor decide solo.\n"
+            "KV caché del draft: tipo de memoria para el historial del modelo chiquito. 'f16'\n"
+            "= máxima precisión (recomendado para drafts), 'q8_0'/'q4_0' = menos VRAM pero\n"
+            "puede reducir la tasa de aceptación. Si lo dejas vacío usa q8_0 por defecto.",
         ).pack(anchor="w", padx=12, pady=(0, 12))
 
         # ---------- Muestreo y anti-bucles (+ presupuesto de razonamiento) ----------
@@ -2879,6 +2904,9 @@ class AppAgentesia:
             "tipo_spec": self.var_tipo_spec,
             "spec_n_max": self.var_spec_n_max,
             "spec_p_min": self.var_spec_p_min,
+            "spec_draft_ngl": self.var_spec_draft_ngl,
+            "spec_draft_kv_k": self.var_spec_draft_kv_k,
+            "spec_draft_kv_v": self.var_spec_draft_kv_v,
             "moe_modo": self.var_moe_modo,
             "moe_n_capas": self.var_moe_n_capas,
             "mmproj": self.var_mmproj,
@@ -3360,6 +3388,15 @@ class AppAgentesia:
             spec_p_min = self.var_spec_p_min.get().strip()
             if spec_p_min:
                 comando += ["--spec-draft-p-min", spec_p_min]
+            spec_draft_ngl = self.var_spec_draft_ngl.get().strip()
+            if spec_draft_ngl:
+                comando += ["--spec-draft-ngl", spec_draft_ngl]
+            spec_draft_kv_k = self.var_spec_draft_kv_k.get().strip()
+            if spec_draft_kv_k:
+                comando += ["--spec-draft-type-k", spec_draft_kv_k]
+            spec_draft_kv_v = self.var_spec_draft_kv_v.get().strip()
+            if spec_draft_kv_v:
+                comando += ["--spec-draft-type-v", spec_draft_kv_v]
         moe_modo = self.var_moe_modo.get()
         if moe_modo == "Todos los expertos en CPU (-cmoe)":
             comando += ["--cpu-moe"]
