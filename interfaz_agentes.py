@@ -61,6 +61,8 @@ import urllib.request
 import tkinter as tk
 from tkinter import colorchooser, filedialog, messagebox, scrolledtext, simpledialog, ttk
 
+import i18n
+
 from estilo_apple import BotonRedondo, crear_tarjeta, imagen_redondeada, mezclar, pintar_tarjeta
 
 from crewai import Agent, Crew, Process, Task
@@ -90,6 +92,9 @@ else:
 
 RUTA_LOGO_JAGUAR = os.path.join(CARPETA_ASSETS, "jaguar_logo.png")
 RUTA_LOGO_GMN = os.path.join(CARPETA_ASSETS, "gmn_logo.png")
+
+i18n.init(CARPETA_BASE)
+t = i18n.t
 
 
 def _detectar_carpeta_recursos():
@@ -657,7 +662,7 @@ def obtener_info_hardware():
 class AppAgentesia:
     def __init__(self, root):
         self.root = root
-        self.root.title("Panel de Control - Agentes IA (llama.cpp + TurboQuant)")
+        self.root.title("GMN AI v1.1.4 — llama.cpp + TurboQuant")
         self.root.geometry("1160x720")
         self.root.minsize(980, 620)
 
@@ -822,22 +827,22 @@ class AppAgentesia:
         self._widgets_panel.append(("borde", self.separador_sidebar))
 
         modulos = [
-            ("modelos", "🧩", "Modelos"),
-            ("descargar", "🔍", "Descargar (Hugging Face)"),
-            ("turboquant", "🧠", "TurboQuant"),
-            ("monitor", "📊", "Monitor en vivo"),
-            ("chat", "💬", "Chat / Playground"),
-            ("proveedores", "☁️", "Proveedores en la nube"),
-            ("agentes", "🤖", "Agentes (Crew)"),
-            ("conexion", "🔌", "Conexión"),
-            ("tunel", "🌐", "Túnel remoto"),
-            ("apariencia", "🎨", "Apariencia"),
-            ("acerca", "ℹ️", "Acerca de"),
+            ("modelos",     "🧩", t("nav_modelos")),
+            ("descargar",   "🔍", t("nav_descargar")),
+            ("turboquant",  "🧠", t("nav_turboquant")),
+            ("monitor",     "📊", t("nav_monitor")),
+            ("chat",        "💬", t("nav_chat")),
+            ("proveedores", "☁️", t("nav_proveedores")),
+            ("agentes",     "🤖", t("nav_agentes")),
+            ("conexion",    "🔌", t("nav_conexion")),
+            ("tunel",       "🌐", t("nav_tunel")),
+            ("apariencia",  "🎨", t("nav_apariencia")),
+            ("acerca",      "ℹ️", t("nav_acerca")),
         ]
         for clave, icono, etiqueta in modulos:
             self._crear_boton_sidebar(clave, icono, etiqueta)
 
-        self.lbl_estado_sidebar = tk.Label(self.sidebar, text="Estado: Listo", font=("Segoe UI", 9), wraplength=196, justify="left", anchor="w")
+        self.lbl_estado_sidebar = tk.Label(self.sidebar, text=t("status_ready"), font=("Segoe UI", 9), wraplength=196, justify="left", anchor="w")
         self.lbl_estado_sidebar.pack(side=tk.BOTTOM, fill=tk.X, padx=16, pady=14)
         self._registrar_texto(self.lbl_estado_sidebar, "sidebar", dim=True)
 
@@ -955,7 +960,7 @@ class AppAgentesia:
             texto_x = cx + r + 14
 
         c.create_text(texto_x, cy - 11, anchor="w", text="GMN AI", fill=t["texto"], font=("Segoe UI", 17, "bold"))
-        c.create_text(texto_x, cy + 13, anchor="w", text="Panel de control · llama.cpp + TurboQuant · Creado por G.M.N TechLab",
+        c.create_text(texto_x, cy + 13, anchor="w", text=t("header_subtitle"),
                       fill=t["texto_dim"], font=("Segoe UI", 9))
 
         # Pastilla dia/noche (clic en cualquier lado la alterna).
@@ -1098,13 +1103,13 @@ class AppAgentesia:
     # PAGINA: MODELOS
     # ==================================================================
     def _pagina_modelos(self, padre):
-        pagina, contenido = self._nueva_pagina(padre, "🧩 Selector de modelos GGUF", scrollable=False)
+        pagina, contenido = self._nueva_pagina(padre, t("page_modelos"), scrollable=False)
 
         # ---- Zona inferior fija: se empaqueta PRIMERO con side=BOTTOM para
         # que su espacio quede siempre reservado y el boton de cargar nunca
         # quede empujado fuera de la ventana, sin importar cuanto contenido
         # haya arriba (carpetas, lista de modelos, etc.). ----
-        self.lbl_estado = tk.Label(contenido, text="Estado: Listo para iniciar.", font=("Segoe UI", 10, "italic"), wraplength=700, justify="left")
+        self.lbl_estado = tk.Label(contenido, text=t("status_ready_start"), font=("Segoe UI", 10, "italic"), wraplength=700, justify="left")
         self.lbl_estado.pack(side=tk.BOTTOM, anchor=tk.W, fill=tk.X, pady=(6, 0))
         self._registrar_texto(self.lbl_estado, "bg", dim=True)
 
@@ -1112,16 +1117,16 @@ class AppAgentesia:
         fila_botones.pack(side=tk.BOTTOM, fill=tk.X)
         self._widgets_panel.append(("bg", fila_botones))
 
-        self.btn_detener = self._crear_boton(fila_botones, "⏹ Detener servidor", self.detener_servidor, state=tk.DISABLED)
+        self.btn_detener = self._crear_boton(fila_botones, t("btn_stop_server"), self.detener_servidor, state=tk.DISABLED)
         self.btn_detener.pack(fill=tk.X, pady=(0, 8))
 
-        self.btn_iniciar = self._crear_boton(fila_botones, "🚀 Cargar modelo (1 clic)", self.iniciar_todo_hilo, primario=True)
+        self.btn_iniciar = self._crear_boton(fila_botones, t("btn_load_model"), self.iniciar_todo_hilo, primario=True)
         self.btn_iniciar.configure(font=("Segoe UI", 12, "bold"), pady=12)
         self.btn_iniciar.pack(fill=tk.X, pady=(0, 8))
         self.btn_iniciar.bind("<Enter>", self.on_enter_btn)
         self.btn_iniciar.bind("<Leave>", self.on_leave_btn)
 
-        self.lbl_leyenda = tk.Label(contenido, text="🟢 Cabe cómodo en 11GB   🟡 Ajustado (baja el contexto)   🔴 Puede no caber en VRAM", font=("Segoe UI", 9, "italic"))
+        self.lbl_leyenda = tk.Label(contenido, text=t("legend_vram"), font=("Segoe UI", 9, "italic"))
         self.lbl_leyenda.pack(side=tk.BOTTOM, anchor=tk.W, pady=(6, 10))
         self._registrar_texto(self.lbl_leyenda, "bg", dim=True)
 
@@ -1130,7 +1135,7 @@ class AppAgentesia:
         # en vez de apilados, para dejarle todo el espacio posible a la lista
         # de modelos de abajo, que es lo importante en esta pagina). La ruta
         # de llama-server.exe se configura en la pagina "TurboQuant".
-        panel_carpetas = self._crear_panel(contenido, "📁 Carpetas donde buscar modelos (.gguf)")
+        panel_carpetas = self._crear_panel(contenido, t("panel_carpetas"))
         fila_carpetas = tk.Frame(panel_carpetas)
         fila_carpetas.pack(fill=tk.X, padx=12, pady=(0, 10))
         self._widgets_panel.append(("panel", fila_carpetas))
@@ -1142,9 +1147,9 @@ class AppAgentesia:
         fila_btns_carpetas = tk.Frame(fila_carpetas)
         fila_btns_carpetas.pack(side=tk.LEFT, padx=(8, 0))
         self._widgets_panel.append(("panel", fila_btns_carpetas))
-        self.btn_agregar_carpeta = self._crear_boton(fila_btns_carpetas, "➕ Agregar", self.agregar_carpeta_modelos)
+        self.btn_agregar_carpeta = self._crear_boton(fila_btns_carpetas, t("btn_add"), self.agregar_carpeta_modelos)
         self.btn_agregar_carpeta.pack(fill=tk.X, pady=(0, 4))
-        self.btn_quitar_carpeta = self._crear_boton(fila_btns_carpetas, "🗑 Quitar", self.quitar_carpeta_modelos)
+        self.btn_quitar_carpeta = self._crear_boton(fila_btns_carpetas, t("btn_remove"), self.quitar_carpeta_modelos)
         self.btn_quitar_carpeta.pack(fill=tk.X)
 
         self._refrescar_lista_carpetas()
@@ -1153,7 +1158,7 @@ class AppAgentesia:
         fila_router.pack(fill=tk.X, pady=(0, 8))
         self._widgets_panel.append(("bg", fila_router))
         self.chk_modo_router = tk.Checkbutton(
-            fila_router, text="🔀 Modo Router: servir varios modelos a la vez (cambia sin reiniciar)",
+            fila_router, text=t("chk_router_mode"),
             variable=self.var_modo_router, font=("Segoe UI", 9, "bold"), bd=0, highlightthickness=0,
             command=self._al_cambiar_modo_router,
         )
@@ -1162,12 +1167,12 @@ class AppAgentesia:
 
         self.fila_opciones_router = tk.Frame(contenido)
         self._widgets_panel.append(("bg", self.fila_opciones_router))
-        lbl_mmax = tk.Label(self.fila_opciones_router, text="Máx. modelos a la vez:")
+        lbl_mmax = tk.Label(self.fila_opciones_router, text=t("lbl_max_models"))
         lbl_mmax.pack(side=tk.LEFT, padx=(20, 4))
         self._registrar_texto(lbl_mmax, "bg", dim=True)
         ttk.Combobox(self.fila_opciones_router, textvariable=self.var_models_max, values=["", "1", "2", "3", "4", "6", "8"], width=6).pack(side=tk.LEFT, padx=(0, 12))
         self.chk_models_autoload = tk.Checkbutton(
-            self.fila_opciones_router, text="Auto-cargar el modelo que pida cada request",
+            self.fila_opciones_router, text=t("chk_autoload"),
             variable=self.var_models_autoload, font=("Segoe UI", 9), bd=0, highlightthickness=0,
         )
         self.chk_models_autoload.pack(side=tk.LEFT)
@@ -1183,7 +1188,7 @@ class AppAgentesia:
         entrada_busq = ttk.Entry(buscador, textvariable=self.filtro_busqueda)
         entrada_busq.pack(side=tk.LEFT, fill=tk.X, expand=True)
         entrada_busq.bind("<KeyRelease>", lambda e: self.filtrar_modelos())
-        self._crear_boton(buscador, "↻ Refrescar", self.cargar_modelos).pack(side=tk.LEFT, padx=(8, 0))
+        self._crear_boton(buscador, t("btn_refresh"), self.cargar_modelos).pack(side=tk.LEFT, padx=(8, 0))
 
         self.canvas_frame = tk.Frame(contenido, bd=1, relief="solid")
         self.canvas_frame.pack(fill=tk.BOTH, expand=True)
@@ -1215,9 +1220,9 @@ class AppAgentesia:
     # PAGINA: TURBOQUANT + CONFIG SERVIDOR
     # ==================================================================
     def _pagina_turboquant(self, padre):
-        pagina, contenido = self._nueva_pagina(padre, "🧠 TurboQuant y configuración del servidor")
+        pagina, contenido = self._nueva_pagina(padre, t("page_turboquant"))
 
-        panel_perfiles = self._crear_panel(contenido, "💾 Perfiles de configuración")
+        panel_perfiles = self._crear_panel(contenido, t("panel_perfiles"))
         # Botones de un clic para los perfiles incluidos (los mismos de la lista).
         fila_rapidos = tk.Frame(panel_perfiles)
         fila_rapidos.pack(fill=tk.X, padx=12, pady=(0, 8))
@@ -1236,10 +1241,10 @@ class AppAgentesia:
         )
         self.combo_perfiles.pack(side=tk.LEFT, padx=(0, 8))
         self.combo_perfiles.bind("<<ComboboxSelected>>", lambda e: self._al_elegir_perfil())
-        self._crear_boton(fila_perfiles, "📥 Cargar", self.cargar_perfil_seleccionado).pack(side=tk.LEFT, padx=(0, 6))
-        self._crear_boton(fila_perfiles, "💾 Guardar", self.guardar_perfil_actual, primario=True).pack(side=tk.LEFT, padx=(0, 6))
-        self._crear_boton(fila_perfiles, "🗑 Eliminar", self.eliminar_perfil_seleccionado).pack(side=tk.LEFT)
-        self.lbl_desc_perfil = self._crear_label_dim(panel_perfiles, "Elige un perfil con ★ para aplicarlo al instante (⚡ rápido, 📚 gran contexto, 🐘 modelo grande, 🧩 MoE, 🛡️ seguro).")
+        self._crear_boton(fila_perfiles, t("btn_load"), self.cargar_perfil_seleccionado).pack(side=tk.LEFT, padx=(0, 6))
+        self._crear_boton(fila_perfiles, t("btn_save"), self.guardar_perfil_actual, primario=True).pack(side=tk.LEFT, padx=(0, 6))
+        self._crear_boton(fila_perfiles, t("btn_delete"), self.eliminar_perfil_seleccionado).pack(side=tk.LEFT)
+        self.lbl_desc_perfil = self._crear_label_dim(panel_perfiles, t("profile_hint"))
         self.lbl_desc_perfil.pack(anchor="w", padx=12, pady=(0, 6))
         self._crear_label_dim(
             panel_perfiles,
@@ -1250,26 +1255,26 @@ class AppAgentesia:
             "contexto' sin tener que volver a tocar cada campo.",
         ).pack(anchor="w", padx=12, pady=(0, 12))
 
-        panel_llama = self._crear_panel(contenido, "🦙 Ubicación de llama-server.exe")
+        panel_llama = self._crear_panel(contenido, t("panel_llama"))
         fila_llama = tk.Frame(panel_llama)
         fila_llama.pack(fill=tk.X, padx=12, pady=(0, 12))
         self._widgets_panel.append(("panel", fila_llama))
         self.entrada_ruta_llama = ttk.Entry(fila_llama, textvariable=self.var_ruta_llama_server, state="readonly")
         self.entrada_ruta_llama.pack(side=tk.LEFT, fill=tk.X, expand=True, ipady=3)
-        self._crear_boton(fila_llama, "📂 Cambiar...", self.cambiar_ruta_llama_server).pack(side=tk.LEFT, padx=(8, 0))
+        self._crear_boton(fila_llama, t("btn_change"), self.cambiar_ruta_llama_server).pack(side=tk.LEFT, padx=(8, 0))
 
-        panel_cfg = self._crear_panel(contenido, "⚙️ Configuración del servidor")
+        panel_cfg = self._crear_panel(contenido, t("panel_cfg_servidor"))
         grid_cfg = tk.Frame(panel_cfg)
         grid_cfg.pack(fill=tk.X, pady=(0, 10))
         self._widgets_panel.append(("panel", grid_cfg))
-        self._crear_entry_config(grid_cfg, "Host:", self.var_host, 0)
-        self._crear_entry_config(grid_cfg, "Puerto:", self.var_port, 1)
-        self._crear_label_card(grid_cfg, "Contexto (tokens):").grid(row=2, column=0, sticky="w", padx=12, pady=6)
+        self._crear_entry_config(grid_cfg, t("lbl_host"), self.var_host, 0)
+        self._crear_entry_config(grid_cfg, t("lbl_port"), self.var_port, 1)
+        self._crear_label_card(grid_cfg, t("lbl_context")).grid(row=2, column=0, sticky="w", padx=12, pady=6)
         ttk.Combobox(grid_cfg, textvariable=self.var_contexto, values=CONTEXTOS, width=15).grid(row=2, column=1, sticky="w", padx=12, pady=6)
-        self._crear_label_card(grid_cfg, "Capas en GPU (-ngl):").grid(row=3, column=0, sticky="w", padx=12, pady=6)
+        self._crear_label_card(grid_cfg, t("lbl_ngl")).grid(row=3, column=0, sticky="w", padx=12, pady=6)
         combo_ngl = ttk.Combobox(grid_cfg, textvariable=self.var_ngl, values=["auto", "all", "20", "28", "36", "40", "48", "60"], width=15)
         combo_ngl.grid(row=3, column=1, sticky="w", padx=12, pady=6)
-        self._crear_label_card(grid_cfg, "Hilos de CPU (-t):").grid(row=4, column=0, sticky="w", padx=12, pady=(6, 12))
+        self._crear_label_card(grid_cfg, t("lbl_threads")).grid(row=4, column=0, sticky="w", padx=12, pady=(6, 12))
         ttk.Entry(grid_cfg, textvariable=self.var_threads, width=17).grid(row=4, column=1, sticky="w", padx=12, pady=(6, 12))
 
         self._crear_label_dim(
@@ -1281,7 +1286,7 @@ class AppAgentesia:
         ).pack(anchor="w", padx=12, pady=(0, 6))
 
         self.chk_auto_fit = tk.Checkbutton(
-            panel_cfg, text="--fit: dejar que llama.cpp ajuste el contexto solo para que quepa en la VRAM",
+            panel_cfg, text=t("chk_auto_fit"),
             variable=self.var_auto_fit, font=("Segoe UI", 9), bd=0, highlightthickness=0,
         )
         self.chk_auto_fit.pack(anchor="w", padx=12, pady=(0, 4))
@@ -1296,7 +1301,7 @@ class AppAgentesia:
         fila_fit_margen = tk.Frame(panel_cfg)
         fila_fit_margen.pack(fill=tk.X, padx=12, pady=(0, 4))
         self._widgets_panel.append(("panel", fila_fit_margen))
-        self._crear_label_card(fila_fit_margen, "Margen de VRAM libre a reservar (MB):").pack(side=tk.LEFT, padx=(0, 8))
+        self._crear_label_card(fila_fit_margen, t("lbl_vram_margin")).pack(side=tk.LEFT, padx=(0, 8))
         ttk.Combobox(fila_fit_margen, textvariable=self.var_fit_margen, values=["256", "512", "1024", "2048"], width=10).pack(side=tk.LEFT)
         self._crear_label_dim(
             panel_cfg,
@@ -1307,20 +1312,20 @@ class AppAgentesia:
             "margen razonable para la mayoría de PCs; súbelo si igual ves problemas.",
         ).pack(anchor="w", padx=12, pady=(0, 12))
 
-        panel_perf = self._crear_panel(contenido, "⚡ Rendimiento avanzado (opcional)")
+        panel_perf = self._crear_panel(contenido, t("panel_rendimiento"))
         grid_perf = tk.Frame(panel_perf)
         grid_perf.pack(fill=tk.X, pady=(0, 6))
         self._widgets_panel.append(("panel", grid_perf))
-        self._crear_label_card(grid_perf, "Hilos para batch (-tb):").grid(row=0, column=0, sticky="w", padx=12, pady=6)
+        self._crear_label_card(grid_perf, t("lbl_batch_threads")).grid(row=0, column=0, sticky="w", padx=12, pady=6)
         ttk.Entry(grid_perf, textvariable=self.var_threads_batch, width=17).grid(row=0, column=1, sticky="w", padx=12, pady=6)
-        self._crear_label_card(grid_perf, "Batch size (-b):").grid(row=1, column=0, sticky="w", padx=12, pady=6)
+        self._crear_label_card(grid_perf, t("lbl_batch")).grid(row=1, column=0, sticky="w", padx=12, pady=6)
         ttk.Combobox(grid_perf, textvariable=self.var_batch_size, values=["", "256", "512", "1024", "2048"], width=15).grid(row=1, column=1, sticky="w", padx=12, pady=6)
-        self._crear_label_card(grid_perf, "Ubatch size (-ub):").grid(row=2, column=0, sticky="w", padx=12, pady=6)
+        self._crear_label_card(grid_perf, t("lbl_ubatch")).grid(row=2, column=0, sticky="w", padx=12, pady=6)
         ttk.Combobox(grid_perf, textvariable=self.var_ubatch_size, values=["", "128", "256", "512", "1024", "2048"], width=15).grid(row=2, column=1, sticky="w", padx=12, pady=6)
-        self._crear_label_card(grid_perf, "Checkpoints de contexto (--ctx-checkpoints):").grid(row=3, column=0, sticky="w", padx=12, pady=6)
+        self._crear_label_card(grid_perf, t("lbl_ctx_checkpoints")).grid(row=3, column=0, sticky="w", padx=12, pady=6)
         ttk.Combobox(grid_perf, textvariable=self.var_ctx_checkpoints,
                      values=["", "0", "1", "2", "4", "8", "16", "32"], width=15).grid(row=3, column=1, sticky="w", padx=12, pady=6)
-        self._crear_label_card(grid_perf, "NUMA (--numa):").grid(row=4, column=0, sticky="w", padx=12, pady=(6, 12))
+        self._crear_label_card(grid_perf, t("lbl_numa")).grid(row=4, column=0, sticky="w", padx=12, pady=(6, 12))
         ttk.Combobox(grid_perf, textvariable=self.var_numa, values=["ninguno", "distribute", "isolate", "numactl"], state="readonly", width=15).grid(row=4, column=1, sticky="w", padx=12, pady=(6, 12))
         self._crear_label_dim(
             grid_perf,
@@ -1334,7 +1339,7 @@ class AppAgentesia:
         fila_load_mode = tk.Frame(panel_perf)
         fila_load_mode.pack(fill=tk.X, padx=12, pady=(0, 6))
         self._widgets_panel.append(("panel", fila_load_mode))
-        self._crear_label_card(fila_load_mode, "Modo de carga (--load-mode):").pack(side=tk.LEFT, padx=(0, 8))
+        self._crear_label_card(fila_load_mode, t("lbl_load_mode")).pack(side=tk.LEFT, padx=(0, 8))
         ttk.Combobox(
             fila_load_mode, textvariable=self.var_load_mode, state="readonly", width=12,
             values=["auto", "none", "mmap", "mlock"],
@@ -1344,7 +1349,7 @@ class AppAgentesia:
         fila_fx.pack(fill=tk.X, padx=12, pady=(10, 0))
         self._widgets_panel.append(("panel", fila_fx))
         self.chk_modo_fx = tk.Checkbutton(
-            fila_fx, text="🧬 Modo FX-8320E: usar rutinas nativas AVX + FMA4 (sin AVX2/FMA3)",
+            fila_fx, text=t("chk_fx_mode"),
             variable=self.var_modo_fx, font=("Segoe UI", 9, "bold"), bd=0, highlightthickness=0,
             command=self._al_cambiar_modo_fx,
         )
@@ -1363,7 +1368,7 @@ class AppAgentesia:
             "el modelo no cabe en RAM+VRAM juntas).",
         ).pack(anchor="w", padx=12, pady=(0, 12))
 
-        panel_lora = self._crear_panel(contenido, "🎛️ Adaptador LoRA (opcional)")
+        panel_lora = self._crear_panel(contenido, t("panel_lora"))
         self._crear_label_dim(
             panel_lora,
             "Aplica un fine-tune ligero (LoRA) sobre el modelo base sin necesitar el modelo\n"
@@ -1374,15 +1379,15 @@ class AppAgentesia:
         self._widgets_panel.append(("panel", fila_lora))
         self.entrada_lora = ttk.Entry(fila_lora, textvariable=self.var_lora, state="readonly")
         self.entrada_lora.pack(side=tk.LEFT, fill=tk.X, expand=True, ipady=3)
-        self._crear_boton(fila_lora, "📂 Elegir...", self.elegir_lora).pack(side=tk.LEFT, padx=(8, 0))
-        self._crear_boton(fila_lora, "🗑 Quitar", self.quitar_lora).pack(side=tk.LEFT, padx=(6, 0))
+        self._crear_boton(fila_lora, t("btn_browse"), self.elegir_lora).pack(side=tk.LEFT, padx=(8, 0))
+        self._crear_boton(fila_lora, t("btn_remove"), self.quitar_lora).pack(side=tk.LEFT, padx=(6, 0))
         fila_lora_escala = tk.Frame(panel_lora)
         fila_lora_escala.pack(fill=tk.X, padx=12, pady=(0, 12))
         self._widgets_panel.append(("panel", fila_lora_escala))
-        self._crear_label_card(fila_lora_escala, "Escala (opcional, ej. 0.8):").pack(side=tk.LEFT, padx=(0, 8))
+        self._crear_label_card(fila_lora_escala, t("lbl_lora_scale")).pack(side=tk.LEFT, padx=(0, 8))
         ttk.Entry(fila_lora_escala, textvariable=self.var_lora_scale, width=10).pack(side=tk.LEFT)
 
-        panel_moe = self._crear_panel(contenido, "🧩 Modelos MoE grandes en poca VRAM (opcional)")
+        panel_moe = self._crear_panel(contenido, t("panel_moe"))
         self._crear_label_dim(
             panel_moe,
             "Para modelos 'Mixture of Experts' (ej. Qwen3.6-35B-A3B, Mixtral, GLM): deja los\n"
@@ -1393,14 +1398,14 @@ class AppAgentesia:
         fila_moe = tk.Frame(panel_moe)
         fila_moe.pack(fill=tk.X, padx=12, pady=(0, 12))
         self._widgets_panel.append(("panel", fila_moe))
-        self._crear_label_card(fila_moe, "Modo:").grid(row=0, column=0, sticky="w", pady=4)
+        self._crear_label_card(fila_moe, t("lbl_moe_mode")).grid(row=0, column=0, sticky="w", pady=4)
         combo_moe = ttk.Combobox(
             fila_moe, textvariable=self.var_moe_modo, state="readonly", width=28,
             values=["Ninguno", "Todos los expertos en CPU (-cmoe)", "Primeras N capas en CPU (-ncmoe)"],
         )
         combo_moe.grid(row=0, column=1, sticky="w", padx=(8, 0), pady=4)
         combo_moe.bind("<<ComboboxSelected>>", lambda e: self._actualizar_estado_moe())
-        self._crear_label_card(fila_moe, "N capas:").grid(row=1, column=0, sticky="w", pady=4)
+        self._crear_label_card(fila_moe, t("lbl_moe_layers")).grid(row=1, column=0, sticky="w", pady=4)
         self.entrada_moe_n = ttk.Entry(fila_moe, textvariable=self.var_moe_n_capas, width=8)
         self.entrada_moe_n.grid(row=1, column=1, sticky="w", padx=(8, 0), pady=4)
         self._actualizar_estado_moe()
@@ -1412,10 +1417,10 @@ class AppAgentesia:
             "KV cuantizada y el reparto automático de capas, para que el motor decida qué entra en\n"
             "la GPU y qué va a la RAM. Solo toca esas opciones; luego puedes afinarlas a mano.",
         ).pack(anchor="w", padx=12, pady=(0, 6))
-        self._crear_boton(panel_moe, "⚡ Preset: modelo grande rápido", self.aplicar_preset_modelo_grande).pack(
+        self._crear_boton(panel_moe, t("btn_preset_large"), self.aplicar_preset_modelo_grande).pack(
             anchor="w", padx=12, pady=(0, 12))
 
-        panel_vision = self._crear_panel(contenido, "👁️ Modelo de visión (opcional)")
+        panel_vision = self._crear_panel(contenido, t("panel_vision"))
         self._crear_label_dim(
             panel_vision,
             "Si el modelo que cargas es multimodal (ej. Liquid LFM2.5-VL), elige aquí su\n"
@@ -1426,8 +1431,8 @@ class AppAgentesia:
         self._widgets_panel.append(("panel", fila_mmproj))
         self.entrada_mmproj = ttk.Entry(fila_mmproj, textvariable=self.var_mmproj, state="readonly")
         self.entrada_mmproj.pack(side=tk.LEFT, fill=tk.X, expand=True, ipady=3)
-        self._crear_boton(fila_mmproj, "📂 Elegir...", self.elegir_mmproj).pack(side=tk.LEFT, padx=(8, 0))
-        self._crear_boton(fila_mmproj, "🗑 Quitar", lambda: self.var_mmproj.set("")).pack(side=tk.LEFT, padx=(6, 0))
+        self._crear_boton(fila_mmproj, t("btn_browse"), self.elegir_mmproj).pack(side=tk.LEFT, padx=(8, 0))
+        self._crear_boton(fila_mmproj, t("btn_remove"), lambda: self.var_mmproj.set("")).pack(side=tk.LEFT, padx=(6, 0))
 
         panel_spec = self._crear_panel(contenido, "🚀 Decodificación especulativa (opcional)")
         self._crear_label_dim(
@@ -1441,7 +1446,7 @@ class AppAgentesia:
         fila_tipo_spec = tk.Frame(panel_spec)
         fila_tipo_spec.pack(fill=tk.X, padx=12, pady=(0, 8))
         self._widgets_panel.append(("panel", fila_tipo_spec))
-        self._crear_label_card(fila_tipo_spec, "Tipo:").pack(side=tk.LEFT)
+        self._crear_label_card(fila_tipo_spec, t("lbl_spec_type")).pack(side=tk.LEFT)
         combo_spec = ttk.Combobox(
             fila_tipo_spec, textvariable=self.var_tipo_spec, state="readonly", width=32,
             values=["Ninguna", "N-gram simple (sin modelo extra)", "N-gram caché (sin modelo extra)", "MTP (sin modelo extra)", "Con modelo draft"],
@@ -1454,9 +1459,9 @@ class AppAgentesia:
         self._widgets_panel.append(("panel", fila_draft))
         self.entrada_modelo_draft = ttk.Entry(fila_draft, textvariable=self.var_modelo_draft, state="readonly")
         self.entrada_modelo_draft.pack(side=tk.LEFT, fill=tk.X, expand=True, ipady=3)
-        self.btn_elegir_draft = self._crear_boton(fila_draft, "📂 Elegir...", self.elegir_modelo_draft)
+        self.btn_elegir_draft = self._crear_boton(fila_draft, t("btn_browse"), self.elegir_modelo_draft)
         self.btn_elegir_draft.pack(side=tk.LEFT, padx=(8, 0))
-        self.btn_quitar_draft = self._crear_boton(fila_draft, "🗑 Quitar", self.quitar_modelo_draft)
+        self.btn_quitar_draft = self._crear_boton(fila_draft, t("btn_remove"), self.quitar_modelo_draft)
         self.btn_quitar_draft.pack(side=tk.LEFT, padx=(6, 0))
         self._actualizar_estado_draft()
 
@@ -1479,13 +1484,13 @@ class AppAgentesia:
         fila_draft_gpu = tk.Frame(panel_spec)
         fila_draft_gpu.pack(fill=tk.X, padx=12, pady=(0, 4))
         self._widgets_panel.append(("panel", fila_draft_gpu))
-        self._crear_label_card(fila_draft_gpu, "GPU layers del modelo draft (--spec-draft-ngl):").grid(row=0, column=0, sticky="w", padx=(0, 8), pady=4)
+        self._crear_label_card(fila_draft_gpu, t("lbl_spec_draft_ngl")).grid(row=0, column=0, sticky="w", padx=(0, 8), pady=4)
         ttk.Combobox(fila_draft_gpu, textvariable=self.var_spec_draft_ngl,
                      values=["", "all", "0", "1", "4", "8", "16", "24", "32"], width=10).grid(row=0, column=1, sticky="w", pady=4)
-        self._crear_label_card(fila_draft_gpu, "KV caché del draft — K (--spec-draft-type-k):").grid(row=1, column=0, sticky="w", padx=(0, 8), pady=4)
+        self._crear_label_card(fila_draft_gpu, t("lbl_spec_kv_k")).grid(row=1, column=0, sticky="w", padx=(0, 8), pady=4)
         ttk.Combobox(fila_draft_gpu, textvariable=self.var_spec_draft_kv_k,
                      values=["", "f16", "q8_0", "q4_0"], width=10, state="readonly").grid(row=1, column=1, sticky="w", pady=4)
-        self._crear_label_card(fila_draft_gpu, "KV caché del draft — V (--spec-draft-type-v):").grid(row=2, column=0, sticky="w", padx=(0, 8), pady=4)
+        self._crear_label_card(fila_draft_gpu, t("lbl_spec_kv_v")).grid(row=2, column=0, sticky="w", padx=(0, 8), pady=4)
         ttk.Combobox(fila_draft_gpu, textvariable=self.var_spec_draft_kv_v,
                      values=["", "f16", "q8_0", "q4_0"], width=10, state="readonly").grid(row=2, column=1, sticky="w", pady=4)
         fila_draft_bsampling = tk.Frame(panel_spec)
@@ -1493,7 +1498,7 @@ class AppAgentesia:
         self._widgets_panel.append(("panel", fila_draft_bsampling))
         chk_bsamp = tk.Checkbutton(
             fila_draft_bsampling,
-            text="⚡ Muestreo del draft en la GPU (--spec-draft-backend-sampling, experimental)",
+            text=t("chk_spec_backend_sampling"),
             variable=self.var_spec_draft_backend_sampling, bd=0, highlightthickness=0,
         )
         chk_bsamp.pack(anchor="w")
@@ -1546,7 +1551,7 @@ class AppAgentesia:
         self._widgets_panel.append(("panel", fila_preserve))
         chk_preserve = tk.Checkbutton(
             fila_preserve,
-            text="🧠 Preservar razonamiento entre turnos (--reasoning-preserve)",
+            text=t("chk_reasoning_preserve"),
             variable=self.var_reasoning_preserve, bd=0, highlightthickness=0,
         )
         chk_preserve.pack(anchor="w")
@@ -1606,9 +1611,9 @@ class AppAgentesia:
         self._crear_boton(panel_disp, "🔍 Ver dispositivos disponibles", self.listar_dispositivos).pack(
             anchor="w", padx=12, pady=(4, 12))
 
-        panel_tools = self._crear_panel(contenido, "🔎 Herramientas para el modelo")
+        panel_tools = self._crear_panel(contenido, t("panel_tools"))
         self.chk_busqueda_web = tk.Checkbutton(
-            panel_tools, text="Búsqueda web (el modelo puede buscar en internet cuando lo necesite)",
+            panel_tools, text=t("chk_websearch"),
             variable=self.var_busqueda_web_tool, font=("Segoe UI", 9, "bold"), bd=0, highlightthickness=0,
         )
         self.chk_busqueda_web.pack(anchor="w", padx=12, pady=(0, 4))
@@ -1641,7 +1646,7 @@ class AppAgentesia:
 
         panel_tq = self._crear_panel(contenido, "🧠 TurboQuant (cuantización caché KV)")
         self.chk_turboquant = tk.Checkbutton(
-            panel_tq, text="Activar TurboQuant al iniciar el servidor", variable=self.var_turboquant,
+            panel_tq, text=t("chk_turboquant"), variable=self.var_turboquant,
             font=("Segoe UI", 9, "bold"), bd=0, highlightthickness=0, command=self._al_cambiar_turboquant,
         )
         self.chk_turboquant.pack(anchor="w", padx=12)
@@ -1683,7 +1688,7 @@ class AppAgentesia:
     def _pagina_chat(self, padre):
         # Sin scroll exterior: el cuadro de chat debe estirarse para llenar
         # todo el alto disponible, no quedar con tamano minimo dentro de un canvas.
-        pagina, contenido = self._nueva_pagina(padre, "💬 Chat / Playground", scrollable=False)
+        pagina, contenido = self._nueva_pagina(padre, t("page_chat"), scrollable=False)
 
         self._crear_label_dim(
             contenido, "Prueba el modelo cargado directamente, sin pasar por VS Code ni por los agentes.", fondo="bg",
@@ -1740,7 +1745,7 @@ class AppAgentesia:
     # PAGINA: PROVEEDORES EN LA NUBE (OpenAI, Claude, u otro compatible)
     # ==================================================================
     def _pagina_proveedores(self, padre):
-        pagina, contenido = self._nueva_pagina(padre, "☁️ Proveedores en la nube")
+        pagina, contenido = self._nueva_pagina(padre, t("page_proveedores"))
 
         self._crear_label_dim(
             contenido,
@@ -2072,28 +2077,28 @@ class AppAgentesia:
     # PAGINA: AGENTES (CREW)
     # ==================================================================
     def _pagina_agentes(self, padre):
-        pagina, contenido = self._nueva_pagina(padre, "🤖 Equipo de Agentes (CrewAI)")
+        pagina, contenido = self._nueva_pagina(padre, t("page_agentes"))
 
-        panel_dev = self._crear_panel(contenido, "👨‍💻 Agente 1 — Desarrollador")
+        panel_dev = self._crear_panel(contenido, t("panel_agente1"))
         grid_dev = tk.Frame(panel_dev)
         grid_dev.pack(fill=tk.X, pady=(0, 12))
         self._widgets_panel.append(("panel", grid_dev))
-        self._crear_entry_config(grid_dev, "Rol:", self.var_rol_dev, 0, ancho=40)
-        self._crear_entry_config(grid_dev, "Objetivo:", self.var_objetivo_dev, 1, ancho=40)
-        self._crear_entry_config(grid_dev, "Tarea:", self.var_tarea_dev, 2, ancho=40)
+        self._crear_entry_config(grid_dev, t("lbl_rol"), self.var_rol_dev, 0, ancho=40)
+        self._crear_entry_config(grid_dev, t("lbl_goal"), self.var_objetivo_dev, 1, ancho=40)
+        self._crear_entry_config(grid_dev, t("lbl_task"), self.var_tarea_dev, 2, ancho=40)
 
-        panel_qa = self._crear_panel(contenido, "🔍 Agente 2 — QA / Revisor")
+        panel_qa = self._crear_panel(contenido, t("panel_agente2"))
         grid_qa = tk.Frame(panel_qa)
         grid_qa.pack(fill=tk.X, pady=(0, 12))
         self._widgets_panel.append(("panel", grid_qa))
-        self._crear_entry_config(grid_qa, "Rol:", self.var_rol_qa, 0, ancho=40)
-        self._crear_entry_config(grid_qa, "Objetivo:", self.var_objetivo_qa, 1, ancho=40)
-        self._crear_entry_config(grid_qa, "Tarea:", self.var_tarea_qa, 2, ancho=40)
+        self._crear_entry_config(grid_qa, t("lbl_rol"), self.var_rol_qa, 0, ancho=40)
+        self._crear_entry_config(grid_qa, t("lbl_goal"), self.var_objetivo_qa, 1, ancho=40)
+        self._crear_entry_config(grid_qa, t("lbl_task"), self.var_tarea_qa, 2, ancho=40)
 
-        self.btn_agentes = self._crear_boton(contenido, "🤖 Ejecutar equipo de Agentes (Crew)", self.ejecutar_agentes_hilo, primario=True, state=tk.DISABLED)
+        self.btn_agentes = self._crear_boton(contenido, t("btn_run_agents"), self.ejecutar_agentes_hilo, primario=True, state=tk.DISABLED)
         self.btn_agentes.pack(fill=tk.X, pady=(4, 6))
 
-        self._crear_label_dim(contenido, "El resultado se guarda en 'resultado_agentes.md' junto al programa.", fondo="bg").pack(anchor="w")
+        self._crear_label_dim(contenido, t("agents_result_note"), fondo="bg").pack(anchor="w")
 
         return pagina
 
@@ -2101,18 +2106,18 @@ class AppAgentesia:
     # PAGINA: CONEXION (endpoint + generadores de config para clientes)
     # ==================================================================
     def _pagina_conexion(self, padre):
-        pagina, contenido = self._nueva_pagina(padre, "🔌 Conexión del agente")
+        pagina, contenido = self._nueva_pagina(padre, t("page_conexion"))
 
-        panel_conn = self._crear_panel(contenido, "Endpoint activo")
+        panel_conn = self._crear_panel(contenido, t("panel_endpoint"))
         fila_endpoint = tk.Frame(panel_conn)
         fila_endpoint.pack(fill=tk.X, padx=12, pady=(0, 12))
         self._widgets_panel.append(("panel", fila_endpoint))
         self.entrada_endpoint = ttk.Entry(fila_endpoint, textvariable=self.endpoint_actual, state="readonly")
         self.entrada_endpoint.pack(side=tk.LEFT, fill=tk.X, expand=True, ipady=3)
-        self.btn_copiar = self._crear_boton(fila_endpoint, "📋 Copiar", self.copiar_endpoint)
+        self.btn_copiar = self._crear_boton(fila_endpoint, t("btn_copy"), self.copiar_endpoint)
         self.btn_copiar.pack(side=tk.LEFT, padx=(6, 0))
 
-        panel_clientes = self._crear_panel(contenido, "Configuración lista para copiar")
+        panel_clientes = self._crear_panel(contenido, t("panel_clientes"))
         self._crear_label_dim(
             panel_clientes, "Genera y copia al portapapeles la configuración para tu editor, con el endpoint ya rellenado.",
         ).pack(anchor="w", padx=12, pady=(0, 8))
@@ -2120,9 +2125,9 @@ class AppAgentesia:
         fila_btns = tk.Frame(panel_clientes)
         fila_btns.pack(fill=tk.X, padx=12, pady=(0, 14))
         self._widgets_panel.append(("panel", fila_btns))
-        self._crear_boton(fila_btns, "🧩 Copiar config Continue (YAML)", self.copiar_config_continue).pack(side=tk.LEFT, padx=(0, 8))
-        self._crear_boton(fila_btns, "🖇️ Copiar config Cline / OpenAI-Compatible", self.copiar_config_cline).pack(side=tk.LEFT, padx=(0, 8))
-        self._crear_boton(fila_btns, "💻 Copiar config OpenCode (JSON)", self.copiar_config_opencode).pack(side=tk.LEFT)
+        self._crear_boton(fila_btns, t("btn_copy_continue"), self.copiar_config_continue).pack(side=tk.LEFT, padx=(0, 8))
+        self._crear_boton(fila_btns, t("btn_copy_cline"), self.copiar_config_cline).pack(side=tk.LEFT, padx=(0, 8))
+        self._crear_boton(fila_btns, t("btn_copy_opencode"), self.copiar_config_opencode).pack(side=tk.LEFT)
 
         return pagina
 
@@ -2189,7 +2194,7 @@ class AppAgentesia:
     # PAGINA: TUNEL REMOTO (cloudflared quick tunnel)
     # ==================================================================
     def _pagina_tunel(self, padre):
-        pagina, contenido = self._nueva_pagina(padre, "🌐 Túnel remoto")
+        pagina, contenido = self._nueva_pagina(padre, t("page_tunel"))
 
         panel = self._crear_panel(contenido, "Exponer el servidor a internet")
 
@@ -2286,7 +2291,7 @@ class AppAgentesia:
     # PAGINA: MONITOR EN VIVO (GPU / VRAM / RAM / CPU)
     # ==================================================================
     def _pagina_monitor(self, padre):
-        pagina, contenido = self._nueva_pagina(padre, "📊 Monitor en vivo")
+        pagina, contenido = self._nueva_pagina(padre, t("page_monitor"))
 
         # Panel de hardware detectado: no depende de que la GPU sea NVIDIA,
         # asi que sirve para cualquiera que instale el programa (AMD, Intel,
@@ -2331,7 +2336,7 @@ class AppAgentesia:
         tk.Frame(panel_sistema, height=8).pack()
 
         panel_proc = self._crear_panel(contenido, "🦙 Proceso llama-server.exe")
-        self.lbl_proceso_servidor = self._crear_label_card(panel_proc, "El servidor no está corriendo.")
+        self.lbl_proceso_servidor = self._crear_label_card(panel_proc, t("status_server_off"))
         self.lbl_proceso_servidor.pack(anchor="w", padx=12, pady=(0, 12))
 
         return pagina
@@ -2404,9 +2409,9 @@ class AppAgentesia:
                 mem_mb = p.memory_info().rss / (1024**2)
                 self.lbl_proceso_servidor.config(text=f"PID {p.pid}  ·  RAM del proceso: {mem_mb:.0f} MB  ·  CPU: {p.cpu_percent(interval=None):.0f}%")
             except Exception:
-                self.lbl_proceso_servidor.config(text="El servidor no está corriendo.")
+                self.lbl_proceso_servidor.config(text=t("status_server_off"))
         else:
-            self.lbl_proceso_servidor.config(text="El servidor no está corriendo.")
+            self.lbl_proceso_servidor.config(text=t("status_server_off"))
 
         self._monitor_job = self.root.after(1500, self._tick_monitor)
 
@@ -2414,7 +2419,7 @@ class AppAgentesia:
     # PAGINA: DESCARGAR MODELOS (busqueda en Hugging Face)
     # ==================================================================
     def _pagina_descargar_hf(self, padre):
-        pagina, contenido = self._nueva_pagina(padre, "🔍 Descargar modelos desde Hugging Face")
+        pagina, contenido = self._nueva_pagina(padre, t("page_descargar"))
 
         self._crear_label_dim(
             contenido, "Busca modelos .gguf gratuitos publicados en Hugging Face y descárgalos\ndirecto a una de tus carpetas de modelos.", fondo="bg",
@@ -2458,7 +2463,7 @@ class AppAgentesia:
         self.btn_buscar_hf.config(state=tk.DISABLED)
         self.lista_resultados_hf.delete(0, tk.END)
         self.resultados_hf = []
-        self.lbl_estado_hf.config(text="Buscando en Hugging Face...")
+        self.lbl_estado_hf.config(text=t("status_searching_hf"))
         hilo = threading.Thread(target=self._buscar_modelos_hf, args=(consulta,), daemon=True)
         hilo.start()
 
@@ -2495,7 +2500,7 @@ class AppAgentesia:
         self.resultados_hf = resultados
         self.lista_resultados_hf.delete(0, tk.END)
         if not resultados:
-            self.lbl_estado_hf.config(text="No se encontraron archivos .gguf para esa búsqueda.")
+            self.lbl_estado_hf.config(text=t("status_no_gguf"))
         else:
             for r in resultados:
                 tam = f"{r['size']/(1024**3):.2f} GB" if r.get("size") else "tamaño desconocido"
@@ -2563,9 +2568,9 @@ class AppAgentesia:
     # PAGINA: APARIENCIA (personalizar colores)
     # ==================================================================
     def _pagina_apariencia(self, padre):
-        pagina, contenido = self._nueva_pagina(padre, "🎨 Apariencia")
+        pagina, contenido = self._nueva_pagina(padre, t("page_apariencia"))
 
-        panel_modo = self._crear_panel(contenido, "Modo de color")
+        panel_modo = self._crear_panel(contenido, t("panel_color_mode"))
         self._crear_label_dim(
             panel_modo,
             "Cambia entre día y noche: combina automáticamente el color elegido\n"
@@ -2574,12 +2579,12 @@ class AppAgentesia:
         fila_modo = tk.Frame(panel_modo)
         fila_modo.pack(fill=tk.X, padx=12, pady=(0, 14))
         self._widgets_panel.append(("panel", fila_modo))
-        self.btn_modo_dia = self._crear_boton(fila_modo, "☀️ Día", lambda: self.cambiar_modo_color(False))
+        self.btn_modo_dia = self._crear_boton(fila_modo, t("btn_day"), lambda: self.cambiar_modo_color(False))
         self.btn_modo_dia.pack(side=tk.LEFT)
-        self.btn_modo_noche = self._crear_boton(fila_modo, "🌙 Noche", lambda: self.cambiar_modo_color(True))
+        self.btn_modo_noche = self._crear_boton(fila_modo, t("btn_night"), lambda: self.cambiar_modo_color(True))
         self.btn_modo_noche.pack(side=tk.LEFT, padx=(8, 0))
 
-        panel = self._crear_panel(contenido, "Paletas rápidas")
+        panel = self._crear_panel(contenido, t("panel_paletas"))
         fila_paletas = tk.Frame(panel)
         fila_paletas.pack(fill=tk.X, padx=12, pady=(0, 14))
         self._widgets_panel.append(("panel", fila_paletas))
@@ -2595,12 +2600,12 @@ class AppAgentesia:
             lbl.pack(pady=(4, 0))
             self._registrar_texto(lbl, "panel", dim=True)
 
-        panel2 = self._crear_panel(contenido, "Colores personalizados")
+        panel2 = self._crear_panel(contenido, t("panel_custom_color"))
         fila_custom = tk.Frame(panel2)
         fila_custom.pack(fill=tk.X, padx=12, pady=(0, 14))
         self._widgets_panel.append(("panel", fila_custom))
         self._swatches_custom = {}
-        for etiqueta, clave in [("Acento", "acento"), ("Fondo", "bg"), ("Panel", "panel"), ("Texto", "texto")]:
+        for etiqueta, clave in [(t("lbl_acento"), "acento"), (t("lbl_fondo"), "bg"), (t("lbl_panel_color"), "panel"), (t("lbl_texto"), "texto")]:
             col = tk.Frame(fila_custom)
             col.pack(side=tk.LEFT, padx=(0, 16))
             self._widgets_panel.append(("panel", col))
@@ -2612,10 +2617,27 @@ class AppAgentesia:
             sw.bind("<Button-1>", lambda e, k=clave: self._elegir_color_custom(k))
             self._swatches_custom[clave] = sw
 
-        self._boton_reset_tema = self._crear_boton(contenido, "↺ Restablecer tema por defecto", self.restablecer_tema)
+        self._boton_reset_tema = self._crear_boton(contenido, t("btn_reset_theme"), self.restablecer_tema)
         self._boton_reset_tema.pack(anchor="w")
 
+        # ---- Language selector ----
+        panel_lang = self._crear_panel(contenido, t("panel_language"))
+        fila_lang = tk.Frame(panel_lang)
+        fila_lang.pack(fill=tk.X, padx=12, pady=(0, 8))
+        self._widgets_panel.append(("panel", fila_lang))
+        for codigo, clave_btn in [("en", "btn_lang_en"), ("es", "btn_lang_es"), ("zh", "btn_lang_zh")]:
+            self._crear_boton(
+                fila_lang, t(clave_btn),
+                lambda c=codigo: self._cambiar_idioma(c),
+            ).pack(side=tk.LEFT, padx=(0, 8))
+        self.lbl_lang_nota = self._crear_label_dim(panel_lang, "")
+        self.lbl_lang_nota.pack(anchor="w", padx=12, pady=(0, 10))
+
         return pagina
+
+    def _cambiar_idioma(self, codigo):
+        i18n.set_lang(codigo)
+        self.lbl_lang_nota.config(text=t("lang_restart_note"))
 
     def _elegir_color_custom(self, clave):
         color_actual = self.tema.get(clave, "#000000")
@@ -2672,7 +2694,7 @@ class AppAgentesia:
         return self._logo_gmn_img
 
     def _pagina_acerca(self, padre):
-        pagina, contenido = self._nueva_pagina(padre, "ℹ️ Acerca de este programa")
+        pagina, contenido = self._nueva_pagina(padre, t("page_acerca"))
 
         logo = self._cargar_logo_gmn()
         if logo is not None:
@@ -2681,7 +2703,7 @@ class AppAgentesia:
             lbl_logo.pack(anchor="w", pady=(0, 12))
             self._registrar_texto(lbl_logo, "bg", dim=False)
 
-        texto = "© 2026 G.M.N TechLab\nCreado por G.M.N TechLab · construido sobre llama.cpp\nCódigo abierto: github.com/jediknightgeorge-ship-it/gmn-ai"
+        texto = t("about_text")
         lbl = tk.Label(contenido, text=texto, font=("Segoe UI", 10), justify="left")
         lbl.pack(anchor="w")
         self._registrar_texto(lbl, "bg", dim=True)
@@ -3265,7 +3287,7 @@ class AppAgentesia:
 
         if not modelos:
             tk.Label(
-                self.frame_modelos, text="❌ No se encontraron archivos .gguf en las carpetas configuradas.",
+                self.frame_modelos, text=t("status_no_model"),
                 bg=t["panel"], fg=t["peligro"], font=("Segoe UI", 10, "bold"),
             ).pack(anchor=tk.W, pady=10, padx=10)
             return
@@ -3320,11 +3342,11 @@ class AppAgentesia:
     # ------------------------------------------------------------------
     def _al_cambiar_modo_router(self):
         if self.var_modo_router.get():
-            self.btn_iniciar.config(text="🚀🔀 Iniciar Router (varios modelos)")
+            self.btn_iniciar.config(text=t("btn_start_router"))
             self.fila_modelo_router.pack(anchor="w", pady=(0, 8), before=self.panel_chat_borde)
             self.fila_opciones_router.pack(anchor="w", pady=(0, 8), after=self.chk_modo_router)
         else:
-            self.btn_iniciar.config(text="🚀 Cargar modelo (1 clic)")
+            self.btn_iniciar.config(text=t("btn_load_model"))
             self.fila_modelo_router.pack_forget()
             self.fila_opciones_router.pack_forget()
 
