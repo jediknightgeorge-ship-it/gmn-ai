@@ -246,6 +246,7 @@ CONTEXTOS = ["4096", "8192", "16384", "32768", "65536", "131072", "262144", "524
 PRESETS_MUESTREO = {
     "Por defecto": {"temp": "", "top_p": "", "top_k": "", "min_p": "", "repeat": "1.1", "presence": "", "dry": "", "reasoning": ""},
     "Anti-bucles": {"temp": "0.7", "top_p": "0.95", "top_k": "40", "min_p": "0.05", "repeat": "1.1", "presence": "1.0", "dry": "0.8", "reasoning": ""},
+    "Qwen3 (oficial anti-bucle)": {"temp": "0.6", "top_p": "0.95", "top_k": "20", "min_p": "0", "repeat": "", "presence": "1.5", "dry": "", "reasoning": ""},
     "Código preciso": {"temp": "0.2", "top_p": "0.9", "top_k": "40", "min_p": "0.05", "repeat": "1.05", "presence": "", "dry": "", "reasoning": ""},
     "Creativo": {"temp": "0.9", "top_p": "0.95", "top_k": "60", "min_p": "0.05", "repeat": "1.1", "presence": "0.5", "dry": "", "reasoning": ""},
 }
@@ -258,7 +259,8 @@ _BASE_RENDIMIENTO = {
     "turboquant": True, "kv_k": "q8_0", "kv_v": "q8_0", "auto_fit": False, "fit_margen": "512",
     "batch_size": "512", "ubatch_size": "256", "load_mode": "auto", "tipo_spec": "Ninguna",
     "spec_n_max": "", "spec_p_min": "", "moe_modo": "Ninguno", "moe_n_capas": "", "rope_modo": "Ninguno",
-    "yarn_orig": "",
+    "yarn_orig": "", "ctx_checkpoints": "", "reasoning_preserve": False,
+    "spec_draft_backend_sampling": False,
 }
 PERFILES_INCLUIDOS = {
     "★ ⚡ Rápido en mi GPU (el modelo cabe)": {
@@ -289,6 +291,44 @@ PERFILES_INCLUIDOS = {
                        "(juegos, edición) o el sistema se pone lento al cargar un modelo.",
         "valores": dict(_BASE_RENDIMIENTO, contexto="4096", ngl="auto", auto_fit=True, fit_margen="1024",
                         batch_size="256", ubatch_size="128"),
+    },
+    "★ 🟣 Qwen3-8B en 2080 Ti (rápido)": {
+        "descripcion": "Optimizado para Qwen3-8B Q4_K_M en RTX 2080 Ti (11 GB): todo en la GPU, contexto 8k,\n"
+                       "caché KV q4_0 (rápido y ligero). Usa preset 'Qwen3 (oficial anti-bucle)' en muestreo.\n"
+                       "Para /no_think en el prompt del sistema: responde directo sin razonar.",
+        "valores": dict(_BASE_RENDIMIENTO, contexto="8192", ngl="all", kv_k="q4_0", kv_v="q4_0",
+                        batch_size="512", ubatch_size="512"),
+    },
+    "★ 🔵 Qwen3.8-27B IQ2 en 2080 Ti (todo en GPU)": {
+        "descripcion": "Para Qwen3.8-27B UD-IQ2_XXS (9 GB) en RTX 2080 Ti: todo en la GPU con el margen\n"
+                       "justo. Checkpoints=4 ahorra VRAM del historial. Contexto 8k para que quepa.\n"
+                       "Activa 'Preservar razonamiento' para que recuerde su pensamiento entre turnos.\n"
+                       "Cuantiza el modelo de: huggingface.co/unsloth/Qwen3.8-27B-GGUF",
+        "valores": dict(_BASE_RENDIMIENTO, contexto="8192", ngl="all", auto_fit=True, fit_margen="512",
+                        kv_k="q4_0", kv_v="q4_0", batch_size="512", ubatch_size="256",
+                        ctx_checkpoints="4", reasoning_preserve=True,
+                        tipo_spec="MTP (sin modelo extra)", spec_n_max="2", spec_p_min="0.5"),
+    },
+    "★ 🔵 Qwen3.8-27B Q3 en 2080 Ti (RAM+GPU)": {
+        "descripcion": "Para Qwen3.8-27B UD-Q3_K_XL (13.4 GB) en RTX 2080 Ti: capas automáticas en GPU\n"
+                       "y el resto en RAM (DDR3 28 GB). Más calidad que IQ2 pero más lento (~2-5 tok/s).\n"
+                       "Checkpoints=4 libera VRAM. Contexto auto-ajustado con margen de 1 GB.\n"
+                       "MoE ubatch grande para leer prompts largos rápido.",
+        "valores": dict(_BASE_RENDIMIENTO, contexto="16384", ngl="auto", auto_fit=True, fit_margen="1024",
+                        kv_k="q4_0", kv_v="q4_0", batch_size="1024", ubatch_size="512",
+                        ctx_checkpoints="4", reasoning_preserve=True),
+    },
+    "★ 🔵 Qwen3.8-27B IQ2 con MTP draft (máx velocidad)": {
+        "descripcion": "Para Qwen3.8-27B IQ2 con su modelo MTP draft: primero descarga el archivo mtp-\n"
+                       "Qwen3.8-27B-UD-IQ2_XXS.gguf y selecciónalo en 'Modelo draft' → 'Con modelo draft'.\n"
+                       "Draft en GPU (all), muestreo GPU activado. Hasta 30-40% más rápido generando.\n"
+                       "Checkpoints=4 para liberar VRAM y que quepan el main + el draft.",
+        "valores": dict(_BASE_RENDIMIENTO, contexto="8192", ngl="all", auto_fit=True, fit_margen="512",
+                        kv_k="q4_0", kv_v="q4_0", batch_size="512", ubatch_size="256",
+                        ctx_checkpoints="4", reasoning_preserve=True,
+                        tipo_spec="Con modelo draft", spec_n_max="2", spec_p_min="0.5",
+                        spec_draft_ngl="all", spec_draft_kv_k="f16", spec_draft_kv_v="f16",
+                        spec_draft_backend_sampling=True),
     },
 }
 
@@ -626,6 +666,7 @@ class AppAgentesia:
         self._widgets_texto = []
         self._tarjetas = []
         self._repintado_tarjetas_job = None
+        self._redibujo_header_job = None
         self._paginas = {}
         self._botones_sidebar = {}
 
@@ -676,6 +717,9 @@ class AppAgentesia:
         self.var_spec_draft_ngl = tk.StringVar(value="")
         self.var_spec_draft_kv_k = tk.StringVar(value="")
         self.var_spec_draft_kv_v = tk.StringVar(value="")
+        self.var_spec_draft_backend_sampling = tk.BooleanVar(value=False)
+        self.var_ctx_checkpoints = tk.StringVar(value="")
+        self.var_reasoning_preserve = tk.BooleanVar(value=False)
         self.var_moe_modo = tk.StringVar(value="Ninguno")
         self.var_moe_n_capas = tk.StringVar(value="")
         self.var_mmproj = tk.StringVar(value="")
@@ -758,7 +802,7 @@ class AppAgentesia:
     def _construir_ventana(self):
         self.header_canvas = tk.Canvas(self.root, height=76, highlightthickness=0, bd=0)
         self.header_canvas.pack(fill=tk.X, side=tk.TOP)
-        self.header_canvas.bind("<Configure>", lambda e: self._redibujar_header())
+        self.header_canvas.bind("<Configure>", lambda e: self._programar_redibujo_header())
 
         cuerpo = tk.Frame(self.root)
         cuerpo.pack(fill=tk.BOTH, expand=True)
@@ -878,7 +922,16 @@ class AppAgentesia:
                     self._logo_img = None
         return self._logo_img
 
+    def _programar_redibujo_header(self):
+        if self._redibujo_header_job is not None:
+            try:
+                self.root.after_cancel(self._redibujo_header_job)
+            except Exception:
+                pass
+        self._redibujo_header_job = self.root.after(80, self._redibujar_header)
+
     def _redibujar_header(self):
+        self._redibujo_header_job = None
         """Encabezado plano estilo Apple: logo, titulo, subtitulo y una
         pastilla dia/noche a la derecha, con una linea fina abajo."""
         c = self.header_canvas
@@ -983,7 +1036,7 @@ class AppAgentesia:
                 self.root.after_cancel(self._repintado_tarjetas_job)
             except Exception:
                 pass
-        self._repintado_tarjetas_job = self.root.after(70, self._repintar_tarjetas)
+        self._repintado_tarjetas_job = self.root.after(120, self._repintar_tarjetas)
 
     def _repintar_tarjetas(self):
         self._repintado_tarjetas_job = None
@@ -1136,7 +1189,7 @@ class AppAgentesia:
         self.canvas_frame.pack(fill=tk.BOTH, expand=True)
         self._widgets_panel.append(("panel_borde", self.canvas_frame))
 
-        self.canvas = tk.Canvas(self.canvas_frame, highlightthickness=0)
+        self.canvas = tk.Canvas(self.canvas_frame, highlightthickness=0, height=200)
         scrollbar = ttk.Scrollbar(self.canvas_frame, orient="vertical", command=self.canvas.yview)
         self.frame_modelos = tk.Frame(self.canvas)
         self._widgets_panel.append(("panel", self.canvas))
@@ -1146,7 +1199,13 @@ class AppAgentesia:
         self._ventana_canvas = self.canvas.create_window((0, 0), window=self.frame_modelos, anchor="nw")
         self.canvas.bind("<Configure>", lambda e: self.canvas.itemconfig(self._ventana_canvas, width=e.width))
         self.canvas.configure(yscrollcommand=scrollbar.set)
-        self.canvas.bind_all("<MouseWheel>", lambda e: self.canvas.yview_scroll(int(-1 * (e.delta / 120)), "units"))
+
+        def _scroll_lista(ev, c=self.canvas):
+            c.yview_scroll(int(-1 * (ev.delta / 120)), "units")
+
+        self.canvas_frame.bind("<Enter>", lambda e, c=self.canvas, f=_scroll_lista: c.bind_all("<MouseWheel>", f))
+        self.canvas_frame.bind("<Leave>", lambda e, c=self.canvas: c.unbind_all("<MouseWheel>"))
+
         self.canvas.pack(side="left", fill="both", expand=True)
         scrollbar.pack(side="right", fill="y")
 
@@ -1258,10 +1317,19 @@ class AppAgentesia:
         ttk.Combobox(grid_perf, textvariable=self.var_batch_size, values=["", "256", "512", "1024", "2048"], width=15).grid(row=1, column=1, sticky="w", padx=12, pady=6)
         self._crear_label_card(grid_perf, "Ubatch size (-ub):").grid(row=2, column=0, sticky="w", padx=12, pady=6)
         ttk.Combobox(grid_perf, textvariable=self.var_ubatch_size, values=["", "128", "256", "512", "1024", "2048"], width=15).grid(row=2, column=1, sticky="w", padx=12, pady=6)
+        self._crear_label_card(grid_perf, "Checkpoints de contexto (--ctx-checkpoints):").grid(row=3, column=0, sticky="w", padx=12, pady=6)
+        ttk.Combobox(grid_perf, textvariable=self.var_ctx_checkpoints,
+                     values=["", "0", "1", "2", "4", "8", "16", "32"], width=15).grid(row=3, column=1, sticky="w", padx=12, pady=6)
+        self._crear_label_card(grid_perf, "NUMA (--numa):").grid(row=4, column=0, sticky="w", padx=12, pady=(6, 12))
+        ttk.Combobox(grid_perf, textvariable=self.var_numa, values=["ninguno", "distribute", "isolate", "numactl"], state="readonly", width=15).grid(row=4, column=1, sticky="w", padx=12, pady=(6, 12))
+        self._crear_label_dim(
+            grid_perf,
+            "Checkpoints de contexto: cuántos fragmentos del historial guarda llama.cpp para\n"
+            "ahorrar VRAM. Default (vacío) = 32. Usa '4' para ahorrar bastante VRAM con GPUs\n"
+            "pequeñas (Qwen3.8-27B IQ2 en 11 GB); '0' = desactivado (más rápido, más VRAM).",
+        ).grid(row=5, column=0, columnspan=2, sticky="w", padx=12, pady=(0, 6))
         self._crear_label_card(grid_perf, "Tip: en modelos MoE grandes, un ubatch de 1024 o más acelera mucho la lectura del prompt\n"
-                                          "(ej. un prompt de 32k). Usa algo más de VRAM; con el auto-ajuste queda margen. Con MoE, la RAM manda más que la VRAM.").grid(row=4, column=0, columnspan=2, sticky="w", padx=12, pady=(0, 10))
-        self._crear_label_card(grid_perf, "NUMA (--numa):").grid(row=3, column=0, sticky="w", padx=12, pady=(6, 12))
-        ttk.Combobox(grid_perf, textvariable=self.var_numa, values=["ninguno", "distribute", "isolate", "numactl"], state="readonly", width=15).grid(row=3, column=1, sticky="w", padx=12, pady=(6, 12))
+                                          "(ej. un prompt de 32k). Usa algo más de VRAM; con el auto-ajuste queda margen. Con MoE, la RAM manda más que la VRAM.").grid(row=6, column=0, columnspan=2, sticky="w", padx=12, pady=(0, 10))
 
         fila_load_mode = tk.Frame(panel_perf)
         fila_load_mode.pack(fill=tk.X, padx=12, pady=(0, 6))
@@ -1420,13 +1488,24 @@ class AppAgentesia:
         self._crear_label_card(fila_draft_gpu, "KV caché del draft — V (--spec-draft-type-v):").grid(row=2, column=0, sticky="w", padx=(0, 8), pady=4)
         ttk.Combobox(fila_draft_gpu, textvariable=self.var_spec_draft_kv_v,
                      values=["", "f16", "q8_0", "q4_0"], width=10, state="readonly").grid(row=2, column=1, sticky="w", pady=4)
+        fila_draft_bsampling = tk.Frame(panel_spec)
+        fila_draft_bsampling.pack(fill=tk.X, padx=12, pady=(0, 4))
+        self._widgets_panel.append(("panel", fila_draft_bsampling))
+        chk_bsamp = tk.Checkbutton(
+            fila_draft_bsampling,
+            text="⚡ Muestreo del draft en la GPU (--spec-draft-backend-sampling, experimental)",
+            variable=self.var_spec_draft_backend_sampling, bd=0, highlightthickness=0,
+        )
+        chk_bsamp.pack(anchor="w")
+        self._widgets_panel.append(("check", chk_bsamp))
         self._crear_label_dim(
             panel_spec,
             "GPU layers del draft: cuántas capas del modelo chiquito van a la GPU. 'all' = todo\n"
             "en la GPU (más rápido). Si lo dejas vacío el motor decide solo.\n"
-            "KV caché del draft: tipo de memoria para el historial del modelo chiquito. 'f16'\n"
-            "= máxima precisión (recomendado para drafts), 'q8_0'/'q4_0' = menos VRAM pero\n"
-            "puede reducir la tasa de aceptación. Si lo dejas vacío usa q8_0 por defecto.",
+            "KV caché del draft: 'f16' = máxima precisión (mejor tasa de aceptación),\n"
+            "'q8_0'/'q4_0' = menos VRAM. Vacío = q8_0 por defecto.\n"
+            "Muestreo del draft en GPU: mueve el muestreo especulativo a la GPU para\n"
+            "más velocidad (experimental; actívalo con '--spec-draft-ngl all').",
         ).pack(anchor="w", padx=12, pady=(0, 12))
 
         # ---------- Muestreo y anti-bucles (+ presupuesto de razonamiento) ----------
@@ -1462,12 +1541,24 @@ class AppAgentesia:
             self._crear_label_card(grid_m, etiqueta).grid(row=fila, column=col * 2, sticky="w", padx=(12, 6), pady=5)
             ttk.Combobox(grid_m, textvariable=variable, values=valores, width=9).grid(
                 row=fila, column=col * 2 + 1, sticky="w", padx=(0, 18), pady=5)
+        fila_preserve = tk.Frame(panel_muestreo)
+        fila_preserve.pack(fill=tk.X, padx=12, pady=(0, 4))
+        self._widgets_panel.append(("panel", fila_preserve))
+        chk_preserve = tk.Checkbutton(
+            fila_preserve,
+            text="🧠 Preservar razonamiento entre turnos (--reasoning-preserve)",
+            variable=self.var_reasoning_preserve, bd=0, highlightthickness=0,
+        )
+        chk_preserve.pack(anchor="w")
+        self._widgets_panel.append(("check", chk_preserve))
         self._crear_label_dim(
             panel_muestreo,
             "Vacío = valor por defecto del motor. 'DRY' castiga las frases que se repiten\n"
             "(0.8 es lo habitual). 'Razonamiento' limita cuántos tokens puede 'pensar' un\n"
             "modelo con razonamiento antes de responder (0 = no pensar; vacío = sin límite),\n"
-            "útil cuando un modelo se agota pensando y deja la respuesta vacía.",
+            "útil cuando un modelo se agota pensando y deja la respuesta vacía.\n"
+            "'Preservar razonamiento': el modelo recuerda su cadena de pensamiento entre\n"
+            "mensajes (recomendado para Qwen3.8-27B y otros modelos 'thinking').",
         ).pack(anchor="w", padx=12, pady=(0, 12))
 
         # ---------- Extender contexto (YaRN) ----------
@@ -2609,7 +2700,7 @@ class AppAgentesia:
 
         self.root.configure(bg=t["bg"])
         self.header_canvas.configure(bg=t["bg"])
-        self._redibujar_header()
+        self._programar_redibujo_header()
 
         # ttk (campos, listas desplegables, barras de scroll): planos y finos,
         # con borde de una linea del color de la tarjeta, como en macOS.
@@ -2771,7 +2862,7 @@ class AppAgentesia:
                 self.btn_iniciar.config(bg=color)
             except tk.TclError:
                 pass
-        self._pulso_job = self.root.after(60, self._tick_pulso)
+        self._pulso_job = self.root.after(120, self._tick_pulso)
 
     # ------------------------------------------------------------------
     # TURBOQUANT
@@ -2907,6 +2998,9 @@ class AppAgentesia:
             "spec_draft_ngl": self.var_spec_draft_ngl,
             "spec_draft_kv_k": self.var_spec_draft_kv_k,
             "spec_draft_kv_v": self.var_spec_draft_kv_v,
+            "spec_draft_backend_sampling": self.var_spec_draft_backend_sampling,
+            "ctx_checkpoints": self.var_ctx_checkpoints,
+            "reasoning_preserve": self.var_reasoning_preserve,
             "moe_modo": self.var_moe_modo,
             "moe_n_capas": self.var_moe_n_capas,
             "mmproj": self.var_mmproj,
@@ -3285,7 +3379,7 @@ class AppAgentesia:
         auto_fit = self.var_auto_fit.get()
         comando += [
             "-ngl", self.var_ngl.get(),
-            "-fa", "on" if turboquant_activo else "auto",
+            "-fa", "on",
             "--cache-type-k", self.var_kv_k.get(),
             "--cache-type-v", self.var_kv_v.get(),
             # Sin esto, llama.cpp reparte "-c" en 4 slots por defecto: cada
@@ -3397,6 +3491,15 @@ class AppAgentesia:
             spec_draft_kv_v = self.var_spec_draft_kv_v.get().strip()
             if spec_draft_kv_v:
                 comando += ["--spec-draft-type-v", spec_draft_kv_v]
+            if self.var_spec_draft_backend_sampling.get():
+                comando += ["--spec-draft-backend-sampling"]
+        # --ctx-checkpoints: ahorra VRAM guardando checkpoints del contexto
+        ctx_checkpoints = self.var_ctx_checkpoints.get().strip()
+        if ctx_checkpoints:
+            comando += ["--ctx-checkpoints", ctx_checkpoints]
+        # --reasoning-preserve: preserva razonamiento entre turnos (modelos thinking)
+        if self.var_reasoning_preserve.get():
+            comando += ["--reasoning-preserve"]
         moe_modo = self.var_moe_modo.get()
         if moe_modo == "Todos los expertos en CPU (-cmoe)":
             comando += ["--cpu-moe"]
