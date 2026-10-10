@@ -15,7 +15,7 @@ echo  Compilando interfaz_agentes.py con PyInstaller...
 echo =========================================================
 echo.
 
-"%PYTHON%" -m PyInstaller interfaz_agentes.spec --noconfirm
+"%PYTHON%" -m PyInstaller interfaz_agentes.spec --noconfirm --clean
 if %errorlevel% neq 0 (
     echo.
     echo [ERROR] La compilacion fallo.
