@@ -12,7 +12,7 @@ can talk to it. Everything runs on your own PC; nothing leaves it unless you tur
 
 ## Download
 
-Get **`gmn-ai-v1.1.5.zip`** from the [Releases page](https://github.com/jediknightgeorge-ship-it/gmn-ai/releases/latest),
+Get **`gmn-ai-v1.1.6.zip`** from the [Releases page](https://github.com/jediknightgeorge-ship-it/gmn-ai/releases/latest),
 unzip it anywhere and run `interfaz_agentes.exe`. No installer, no Python needed.
 
 You also need **your own `llama-server.exe`** (the app does not bundle llama.cpp). Download the build that matches
@@ -84,7 +84,7 @@ Save your own with 💾 Save.
 
 **Using the model**
 - **Chat / Playground** with Markdown rendering and a **built-in web search tool** (DuckDuckGo, no API key needed).
-- **Cloud providers**: add OpenAI-compatible endpoints or Anthropic (Claude) with your own API key — same Chat window.
+- **Cloud providers catalog**: 28 pre-configured providers (17 free, 11 paid) — select from the catalog, auto-fills URL and model. Covers Groq, Google Gemini, Mistral, NVIDIA NIM, OpenRouter, Cerebras, Cohere, OpenAI, Anthropic, Azure, Together AI, Fireworks, Perplexity, DeepSeek, xAI Grok, Ollama, LM Studio and more. Use any API alongside your local models in the same Chat window.
 - **Connection page**: ready-made config snippets for **Continue**, **Cline** and **OpenCode**.
 - **Hugging Face downloader**: search models by name, pick a file, download — always with a confirmation step.
 - **Remote tunnel** (cloudflared) — expose your local server outside your network (optional; needs `cloudflared.exe`).
@@ -121,7 +121,7 @@ A model that fits entirely in VRAM is dramatically faster than one that spills i
 ```bash
 pip install pyinstaller crewai langchain-openai psutil pillow mcp beautifulsoup4 requests
 pyinstaller interfaz_agentes.spec --noconfirm
-# output: dist_nuevo/gmn ai/interfaz_agentes.exe
+# output: releases/v1.1.6/interfaz_agentes.exe
 ```
 
 Run without compiling: `python interfaz_agentes.py`
@@ -130,12 +130,18 @@ Source files:
 
 | File | Purpose |
 |---|---|
-| `interfaz_agentes.py` | Main app (~3 200 lines) |
+| `interfaz_agentes.py` | Main app (~4 000 lines) |
 | `i18n.py` | Translation strings — EN / ES / ZH (~100 keys) |
 | `estilo_apple.py` | Rounded Apple-style widgets |
 | `interfaz_agentes.spec` | PyInstaller build recipe |
 
 ## Changelog
+
+### v1.1.6 — 2026-10-10
+- **Cloud providers catalog**: 28 providers pre-configured (Groq, Google Gemini, Mistral, NVIDIA NIM, OpenRouter, Cerebras, Cohere, Cloudflare, Hugging Face, LLM7.io, Kilo Code, SambaNova, DeepSeek, xAI Grok, Zhipu GLM, Ollama, LM Studio — plus OpenAI, Anthropic, Azure, Together AI, Fireworks, Perplexity and more paid providers). Just click a provider → choose a model → paste your API key.
+- **Provider catalog search & filter**: live text filter and "Free only" checkbox to find providers instantly.
+- **Suggested model combo**: each provider shows its best models in a dropdown, pre-selected automatically.
+- **Clean build output**: `compilar_interfaz.bat` now copies each build to `releases\vX.X.X\` — no more `dist_v2` / `dist_nuevo` clutter.
 
 ### v1.1.5 — 2026-10-10
 - **Language switcher auto-restarts** — no more manual restart needed; the app offers a restart dialog the moment you change language

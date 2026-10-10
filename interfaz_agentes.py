@@ -121,6 +121,240 @@ ARCHIVO_CARPETAS_MODELOS = os.path.join(CARPETA_BASE, "carpetas_modelos.json")
 ARCHIVO_RUTA_LLAMA = os.path.join(CARPETA_BASE, "ruta_llama_server.json")
 ARCHIVO_PROVEEDORES_NUBE = os.path.join(CARPETA_BASE, "proveedores_nube.json")
 
+# Catálogo de proveedores conocidos (gratis y de pago).
+# tipo: "openai" = endpoint compatible OpenAI (/chat/completions)
+#       "anthropic" = API nativa de Anthropic (/messages)
+# gratis: True = tier permanente sin tarjeta (o muy accesible)
+# modelos: lista de model IDs sugeridos (primero = recomendado)
+CATALOGO_PROVEEDORES = [
+    # ── GRATUITOS ─────────────────────────────────────────────────────────────
+    {
+        "nombre": "Groq (gratis)",
+        "tipo": "openai",
+        "base_url": "https://api.groq.com/openai/v1",
+        "modelos": ["moonshotai/kimi-k2-instruct", "llama-3.3-70b-versatile",
+                    "llama-3.1-70b-versatile", "mixtral-8x7b-32768", "gemma2-9b-it"],
+        "gratis": True,
+        "nota": "30 RPM · 250 RPD · sin tarjeta · console.groq.com/keys",
+    },
+    {
+        "nombre": "Google Gemini (gratis)",
+        "tipo": "openai",
+        "base_url": "https://generativelanguage.googleapis.com/v1beta/openai",
+        "modelos": ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro"],
+        "gratis": True,
+        "nota": "15 RPM · 1500 RPD · sin tarjeta · aistudio.google.com/apikey",
+    },
+    {
+        "nombre": "Mistral AI (gratis)",
+        "tipo": "openai",
+        "base_url": "https://api.mistral.ai/v1",
+        "modelos": ["mistral-medium-3-5-128b", "mistral-small-latest",
+                    "open-mistral-7b", "open-mixtral-8x7b"],
+        "gratis": True,
+        "nota": "Tier gratuito permanente · console.mistral.ai",
+    },
+    {
+        "nombre": "NVIDIA NIM (gratis)",
+        "tipo": "openai",
+        "base_url": "https://integrate.api.nvidia.com/v1",
+        "modelos": ["nvidia/nemotron-3-ultra-550b-a55b", "z-ai/glm-5.2",
+                    "meta/llama-3.3-70b-instruct", "nvidia/llama-3.1-nemotron-70b-instruct"],
+        "gratis": True,
+        "nota": "132 modelos · verif. teléfono · build.nvidia.com",
+    },
+    {
+        "nombre": "OpenRouter (gratis + pago)",
+        "tipo": "openai",
+        "base_url": "https://openrouter.ai/api/v1",
+        "modelos": ["nvidia/nemotron-3-ultra-550b-a55b:free", "poolside/laguna-s-2.1:free",
+                    "meta-llama/llama-3.3-70b-instruct:free", "deepseek/deepseek-r1:free",
+                    "google/gemini-2.5-flash:free", "openai/gpt-4o", "anthropic/claude-opus-4-5"],
+        "gratis": True,
+        "nota": "Modelos ':free' gratis · openrouter.ai/keys",
+    },
+    {
+        "nombre": "Cerebras (gratis)",
+        "tipo": "openai",
+        "base_url": "https://api.cerebras.ai/v1",
+        "modelos": ["llama3.1-70b", "llama3.1-8b", "qwen-3-32b"],
+        "gratis": True,
+        "nota": "Muy rápido · cloud.cerebras.ai",
+    },
+    {
+        "nombre": "Cohere (gratis)",
+        "tipo": "openai",
+        "base_url": "https://api.cohere.com/v2",
+        "modelos": ["command-a-218b", "command-a-111b", "command-r-plus", "command-r"],
+        "gratis": True,
+        "nota": "20 RPM · sin tarjeta · dashboard.cohere.com/api-keys",
+    },
+    {
+        "nombre": "Cloudflare Workers AI (gratis)",
+        "tipo": "openai",
+        "base_url": "https://api.cloudflare.com/client/v4/accounts/{account_id}/ai/run",
+        "modelos": ["@cf/meta/llama-3.3-70b-instruct-fp8-fast",
+                    "@cf/mistral/mistral-7b-instruct-v0.1", "@cf/qwen/qwen1.5-7b-chat"],
+        "gratis": True,
+        "nota": "40 modelos · reemplaza {account_id} · dash.cloudflare.com",
+    },
+    {
+        "nombre": "Hugging Face (gratis)",
+        "tipo": "openai",
+        "base_url": "https://router.huggingface.co/v1",
+        "modelos": ["meta-llama/Meta-Llama-3.1-8B-Instruct", "google/gemma-3-4b-it",
+                    "microsoft/phi-4", "deepseek-ai/DeepSeek-R1-Distill-Qwen-7B"],
+        "gratis": True,
+        "nota": "Credit-metered · huggingface.co/settings/tokens",
+    },
+    {
+        "nombre": "LLM7.io (gratis)",
+        "tipo": "openai",
+        "base_url": "https://api.llm7.io/v1",
+        "modelos": ["gpt-oss-20b", "mistral-Nemo-Instruct-2407", "minimax-m2.7"],
+        "gratis": True,
+        "nota": "60 RPM · sin tarjeta · llm7.io",
+    },
+    {
+        "nombre": "Kilo Code (gratis)",
+        "tipo": "openai",
+        "base_url": "https://api.kilo.ai/api/gateway",
+        "modelos": ["nvidia/nemotron-3-ultra-550b-a55b:free", "stepfun/step-3.7-flash:free",
+                    "google/gemini-2.5-flash:free"],
+        "gratis": True,
+        "nota": "200 req/hr · sin tarjeta · kilolabs.ai",
+    },
+    {
+        "nombre": "SambaNova (gratis)",
+        "tipo": "openai",
+        "base_url": "https://api.sambanova.ai/v1",
+        "modelos": ["DeepSeek-V3-1", "DeepSeek-V3-2-Preview", "MiniMax-M2.7",
+                    "Meta-Llama-3.1-405B-Instruct"],
+        "gratis": True,
+        "nota": "20 RPM · registro · cloud.sambanova.ai",
+    },
+    {
+        "nombre": "DeepSeek (gratis/pago)",
+        "tipo": "openai",
+        "base_url": "https://api.deepseek.com/v1",
+        "modelos": ["deepseek-chat", "deepseek-reasoner"],
+        "gratis": True,
+        "nota": "Muy barato · platform.deepseek.com/api_keys",
+    },
+    {
+        "nombre": "xAI / Grok (créditos)",
+        "tipo": "openai",
+        "base_url": "https://api.x.ai/v1",
+        "modelos": ["grok-4", "grok-4-mini", "grok-3", "grok-3-mini", "grok-2"],
+        "gratis": True,
+        "nota": "$25/mes en créditos gratuitos · console.x.ai",
+    },
+    {
+        "nombre": "Z AI / Zhipu GLM (gratis)",
+        "tipo": "openai",
+        "base_url": "https://open.bigmodel.cn/api/paas/v4",
+        "modelos": ["glm-4.7-flash", "glm-4.6v-flash", "glm-4-flash"],
+        "gratis": True,
+        "nota": "1 req concurrente · bigmodel.cn",
+    },
+    {
+        "nombre": "Ollama (local/red)",
+        "tipo": "openai",
+        "base_url": "http://localhost:11434/v1",
+        "modelos": ["llama3.3", "qwen2.5:72b", "mistral", "deepseek-r1:70b", "phi4"],
+        "gratis": True,
+        "nota": "Ollama corriendo local · cambia la URL si está en red",
+    },
+    {
+        "nombre": "LM Studio (local)",
+        "tipo": "openai",
+        "base_url": "http://localhost:1234/v1",
+        "modelos": ["local-model"],
+        "gratis": True,
+        "nota": "Servidor local LM Studio · API key puede ser 'lm-studio'",
+    },
+    # ── DE PAGO ────────────────────────────────────────────────────────────────
+    {
+        "nombre": "OpenAI (pago)",
+        "tipo": "openai",
+        "base_url": "https://api.openai.com/v1",
+        "modelos": ["gpt-4o", "gpt-4o-mini", "o3", "o4-mini", "gpt-4-turbo",
+                    "o1", "o1-mini", "gpt-3.5-turbo"],
+        "gratis": False,
+        "nota": "Pago por tokens · platform.openai.com/api-keys",
+    },
+    {
+        "nombre": "Anthropic Claude (pago)",
+        "tipo": "anthropic",
+        "base_url": "https://api.anthropic.com/v1",
+        "modelos": ["claude-opus-5-5", "claude-sonnet-5-5", "claude-haiku-4-5-20251001",
+                    "claude-opus-4-5", "claude-sonnet-4-5", "claude-haiku-4-5"],
+        "gratis": False,
+        "nota": "Pago por tokens · console.anthropic.com/settings/keys",
+    },
+    {
+        "nombre": "Google Gemini Pro (pago)",
+        "tipo": "openai",
+        "base_url": "https://generativelanguage.googleapis.com/v1beta/openai",
+        "modelos": ["gemini-2.5-pro", "gemini-2.0-pro-exp", "gemini-1.5-pro"],
+        "gratis": False,
+        "nota": "Pago por tokens · aistudio.google.com/apikey",
+    },
+    {
+        "nombre": "Mistral AI (pago)",
+        "tipo": "openai",
+        "base_url": "https://api.mistral.ai/v1",
+        "modelos": ["mistral-large-latest", "mistral-medium-latest",
+                    "codestral-latest", "pixtral-large-latest"],
+        "gratis": False,
+        "nota": "Pago por tokens · console.mistral.ai",
+    },
+    {
+        "nombre": "Cohere (pago)",
+        "tipo": "openai",
+        "base_url": "https://api.cohere.com/v2",
+        "modelos": ["command-a-218b", "command-r-plus", "command-r"],
+        "gratis": False,
+        "nota": "Pago por tokens · dashboard.cohere.com",
+    },
+    {
+        "nombre": "Azure OpenAI (pago)",
+        "tipo": "openai",
+        "base_url": "https://{resource}.openai.azure.com/openai/deployments/{deployment}",
+        "modelos": ["gpt-4o", "gpt-4-turbo", "gpt-35-turbo"],
+        "gratis": False,
+        "nota": "Reemplaza {resource} y {deployment} · portal.azure.com",
+    },
+    {
+        "nombre": "Together AI (pago)",
+        "tipo": "openai",
+        "base_url": "https://api.together.xyz/v1",
+        "modelos": ["meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo",
+                    "mistralai/Mixtral-8x22B-Instruct-v0.1", "deepseek-ai/DeepSeek-R1"],
+        "gratis": False,
+        "nota": "Pago por tokens · api.together.ai",
+    },
+    {
+        "nombre": "Fireworks AI (pago)",
+        "tipo": "openai",
+        "base_url": "https://api.fireworks.ai/inference/v1",
+        "modelos": ["accounts/fireworks/models/llama-v3p3-70b-instruct",
+                    "accounts/fireworks/models/deepseek-r1",
+                    "accounts/fireworks/models/qwen3-235b-a22b"],
+        "gratis": False,
+        "nota": "Muy rápido · fireworks.ai/account/api-keys",
+    },
+    {
+        "nombre": "Perplexity AI (pago)",
+        "tipo": "openai",
+        "base_url": "https://api.perplexity.ai",
+        "modelos": ["llama-3.1-sonar-huge-128k-online", "llama-3.1-sonar-large-128k-online",
+                    "llama-3.1-sonar-small-128k-online"],
+        "gratis": False,
+        "nota": "Con búsqueda web · perplexity.ai/settings/api",
+    },
+]
+
 
 def cargar_proveedores_nube():
     """Lista de proveedores en la nube guardados (OpenAI, Claude, u otro
@@ -254,6 +488,8 @@ PRESETS_MUESTREO = {
     "Qwen3 (oficial anti-bucle)": {"temp": "0.6", "top_p": "0.95", "top_k": "20", "min_p": "0", "repeat": "", "presence": "1.5", "dry": "", "reasoning": ""},
     "Código preciso": {"temp": "0.2", "top_p": "0.9", "top_k": "40", "min_p": "0.05", "repeat": "1.05", "presence": "", "dry": "", "reasoning": ""},
     "Creativo": {"temp": "0.9", "top_p": "0.95", "top_k": "60", "min_p": "0.05", "repeat": "1.1", "presence": "0.5", "dry": "", "reasoning": ""},
+    "🟤 Bonsai (Prism ML - pensar)": {"temp": "1.0", "top_p": "0.95", "top_k": "20", "min_p": "0.05", "repeat": "", "presence": "0.0", "dry": "", "reasoning": ""},
+    "🟤 Bonsai (Prism ML - directo)": {"temp": "0.7", "top_p": "0.80", "top_k": "20", "min_p": "0.0", "repeat": "", "presence": "1.5", "dry": "", "reasoning": ""},
 }
 
 # Perfiles ya hechos (aparecen arriba en "Perfiles de configuración" con una ★).
@@ -334,6 +570,50 @@ PERFILES_INCLUIDOS = {
                         tipo_spec="Con modelo draft", spec_n_max="2", spec_p_min="0.5",
                         spec_draft_ngl="all", spec_draft_kv_k="f16", spec_draft_kv_v="f16",
                         spec_draft_backend_sampling=True),
+    },
+    "★ 🟤 Bonsai 27B Ternary (PrismML fork)": {
+        "descripcion": "Para Bonsai 27B Ternary (~8 GB) en RTX 2080 Ti: todo en la GPU con holgura.\n"
+                       "⚠ REQUIERE el fork llama.cpp de PrismML (no el estándar):\n"
+                       "  git clone -b prism https://github.com/PrismML-Eng/llama.cpp\n"
+                       "Usa preset de muestreo '🟤 Bonsai (Prism ML - pensar)' para razonamiento\n"
+                       "o '🟤 Bonsai (Prism ML - directo)' para respuestas rápidas sin pensar.\n"
+                       "Modelo en: huggingface.co/prism-ml/Ternary-Bonsai-2-27B-gguf",
+        "valores": dict(_BASE_RENDIMIENTO, contexto="16384", ngl="all", auto_fit=True, fit_margen="512",
+                        kv_k="q8_0", kv_v="q8_0", batch_size="512", ubatch_size="256",
+                        reasoning_preserve=True),
+    },
+    "★ 🟠 Qwen 3.5-27B IQ2 (GPU pequeña)": {
+        "descripcion": "Para Qwen3.5-27B en cuantización extrema IQ2_XXS (~9 GB) en GPUs de 10-11 GB.\n"
+                       "Todo en GPU con contexto ajustado. Muy buena calidad para el tamaño.\n"
+                       "Usa preset 'Qwen3 (oficial anti-bucle)' en muestreo.\n"
+                       "Modelo en: huggingface.co/unsloth o bartowski (filtrar IQ2_XXS o IQ2_XS).",
+        "valores": dict(_BASE_RENDIMIENTO, contexto="8192", ngl="all", auto_fit=True, fit_margen="512",
+                        kv_k="q4_0", kv_v="q4_0", batch_size="512", ubatch_size="256",
+                        ctx_checkpoints="4"),
+    },
+    "★ 🟢 Qwen 3.5-9B (agéntico / rápido)": {
+        "descripcion": "Para Qwen3.5-9B Q4_K_M (~5.5 GB) en RTX 2080 Ti: todo en GPU con mucho margen.\n"
+                       "Ideal para uso agéntico (respuestas rápidas, herramientas, llamadas API).\n"
+                       "También funciona Qwen 2.7B o 1.5B para respuestas aún más veloces.\n"
+                       "Usa preset 'Qwen3 (oficial anti-bucle)' en muestreo.",
+        "valores": dict(_BASE_RENDIMIENTO, contexto="32768", ngl="all", auto_fit=False,
+                        kv_k="q8_0", kv_v="q8_0", batch_size="512", ubatch_size="512"),
+    },
+    "★ 💜 Gemma 4 27B (equilibrio calidad)": {
+        "descripcion": "Para Gemma 4 27B Q4_K_M (~15 GB) en RTX 2080 Ti: capas auto en GPU, resto en RAM.\n"
+                       "Buen equilibrio calidad/velocidad para tareas generales y programación.\n"
+                       "Modelos en: huggingface.co/bartowski (filtrar Gemma-4-27B-IT-GGUF).",
+        "valores": dict(_BASE_RENDIMIENTO, contexto="8192", ngl="auto", auto_fit=True, fit_margen="512",
+                        kv_k="q8_0", kv_v="q8_0", batch_size="512", ubatch_size="256"),
+    },
+    "★ 📐 Doble contexto (KV Cache q8_0)": {
+        "descripcion": "Duplica la ventana de contexto cuantizando el KV Cache a q8_0 (casi sin pérdida\n"
+                       "de calidad). Con un modelo de 8k de contexto, puedes llegar a 16k-32k.\n"
+                       "Activa 'Ajuste automático' para que llama.cpp calcule el máximo que entra.\n"
+                       "Basado en el video de Nichonauta: 'Optimizar KV Cache - Duplica tu contexto'.",
+        "valores": dict(_BASE_RENDIMIENTO, contexto="32768", ngl="all", auto_fit=True, fit_margen="512",
+                        kv_k="q8_0", kv_v="q8_0", turboquant=False,
+                        batch_size="512", ubatch_size="256"),
     },
 }
 
@@ -662,7 +942,7 @@ def obtener_info_hardware():
 class AppAgentesia:
     def __init__(self, root):
         self.root = root
-        self.root.title("GMN AI v1.1.4 — llama.cpp + TurboQuant")
+        self.root.title("GMN AI v1.1.6 — llama.cpp + TurboQuant")
         self.root.geometry("1160x720")
         self.root.minsize(980, 620)
 
@@ -1755,6 +2035,73 @@ class AppAgentesia:
             fondo="bg",
         ).pack(anchor="w", pady=(0, 10))
 
+        # ── Catálogo de proveedores ──────────────────────────────────────────
+        panel_cat = self._crear_panel(contenido, "🌐 Catálogo de proveedores")
+
+        # Filtro de búsqueda
+        fila_filtro = tk.Frame(panel_cat)
+        fila_filtro.pack(fill=tk.X, padx=12, pady=(0, 4))
+        self._widgets_panel.append(("panel", fila_filtro))
+        self._crear_label_card(fila_filtro, "Buscar:").pack(side=tk.LEFT)
+        self.var_cat_filtro = tk.StringVar()
+        entry_filtro = tk.Entry(fila_filtro, textvariable=self.var_cat_filtro, width=28,
+                                font=("Segoe UI", 9), relief="flat", bd=1)
+        entry_filtro.pack(side=tk.LEFT, padx=(4, 8))
+        self.var_cat_filtro.trace_add("write", lambda *_: self._refrescar_catalogo())
+
+        # Checkbutton solo gratuitos
+        self.var_cat_solo_gratis = tk.BooleanVar(value=False)
+        chk_gratis = tk.Checkbutton(fila_filtro, text="Solo gratis",
+                                    variable=self.var_cat_solo_gratis,
+                                    command=self._refrescar_catalogo,
+                                    font=("Segoe UI", 9), relief="flat", bd=0,
+                                    cursor="hand2")
+        chk_gratis.pack(side=tk.LEFT)
+        self._widgets_panel.append(("panel", chk_gratis))
+
+        # Listbox con scroll
+        marco_cat = tk.Frame(panel_cat)
+        marco_cat.pack(fill=tk.BOTH, padx=12, pady=(0, 4), expand=True)
+        self._widgets_panel.append(("panel", marco_cat))
+        scroll_cat = ttk.Scrollbar(marco_cat, orient="vertical")
+        self.lista_catalogo = tk.Listbox(
+            marco_cat, height=8, font=("Segoe UI", 9), relief="flat", bd=0,
+            yscrollcommand=scroll_cat.set, activestyle="none", cursor="hand2",
+        )
+        scroll_cat.config(command=self.lista_catalogo.yview)
+        self.lista_catalogo.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        scroll_cat.pack(side=tk.RIGHT, fill=tk.Y)
+
+        # Nota del proveedor seleccionado
+        self.var_cat_nota = tk.StringVar(value="")
+        lbl_nota = self._crear_label_dim(panel_cat, "", fondo="panel")
+        lbl_nota.configure(textvariable=self.var_cat_nota)
+        lbl_nota.pack(anchor="w", padx=12, pady=(0, 4))
+        self._lbl_cat_nota = lbl_nota
+
+        # Combo de modelos sugeridos del proveedor
+        fila_mod_cat = tk.Frame(panel_cat)
+        fila_mod_cat.pack(fill=tk.X, padx=12, pady=(0, 4))
+        self._widgets_panel.append(("panel", fila_mod_cat))
+        self._crear_label_card(fila_mod_cat, "Modelo sugerido:").pack(side=tk.LEFT)
+        self.var_cat_modelo_sugerido = tk.StringVar()
+        self.combo_cat_modelos = ttk.Combobox(
+            fila_mod_cat, textvariable=self.var_cat_modelo_sugerido,
+            state="readonly", width=38,
+        )
+        self.combo_cat_modelos.pack(side=tk.LEFT, padx=(4, 0))
+
+        # Botón "Usar este →"
+        fila_btn_cat = tk.Frame(panel_cat)
+        fila_btn_cat.pack(fill=tk.X, padx=12, pady=(0, 12))
+        self._widgets_panel.append(("panel", fila_btn_cat))
+        self._crear_boton(
+            fila_btn_cat, "✅ Usar este proveedor →", self._usar_proveedor_catalogo, primario=True,
+        ).pack(side=tk.LEFT)
+
+        self.lista_catalogo.bind("<<ListboxSelect>>", lambda e: self._al_seleccionar_catalogo())
+
+        # ── Proveedores guardados ────────────────────────────────────────────
         panel_lista = self._crear_panel(contenido, "Proveedores guardados")
         self.lista_proveedores = tk.Listbox(panel_lista, height=5, font=("Segoe UI", 9), relief="flat", bd=0)
         self.lista_proveedores.pack(fill=tk.X, padx=12, pady=(0, 8))
@@ -1763,39 +2110,96 @@ class AppAgentesia:
         self._widgets_panel.append(("panel", fila_btn_prov))
         self._crear_boton(fila_btn_prov, "🗑 Quitar seleccionado", self.quitar_proveedor_nube).pack(side=tk.LEFT)
 
-        panel_add = self._crear_panel(contenido, "➕ Agregar proveedor")
+        # ── Formulario agregar proveedor ─────────────────────────────────────
+        panel_add = self._crear_panel(contenido, "➕ Agregar / editar proveedor")
         grid_add = tk.Frame(panel_add)
         grid_add.pack(fill=tk.X, padx=12, pady=(0, 6))
         self._widgets_panel.append(("panel", grid_add))
-        self._crear_entry_config(grid_add, "Nombre (ej. 'Mi OpenAI'):", self.var_prov_nombre, 0, ancho=30)
+        self._crear_entry_config(grid_add, "Nombre:", self.var_prov_nombre, 0, ancho=34)
         self._crear_label_card(grid_add, "Tipo:").grid(row=1, column=0, sticky="w", padx=12, pady=6)
         combo_tipo = ttk.Combobox(
-            grid_add, textvariable=self.var_prov_tipo, state="readonly", width=27,
+            grid_add, textvariable=self.var_prov_tipo, state="readonly", width=31,
             values=["OpenAI / compatible", "Anthropic (Claude)"],
         )
         combo_tipo.grid(row=1, column=1, sticky="w", padx=12, pady=6)
         combo_tipo.bind("<<ComboboxSelected>>", lambda e: self._al_cambiar_tipo_proveedor())
-        self._crear_entry_config(grid_add, "URL base:", self.var_prov_base_url, 2, ancho=30)
-        self._crear_entry_config(grid_add, "API Key:", self.var_prov_api_key, 3, ancho=30)
-        self._crear_entry_config(grid_add, "Modelo (ej. gpt-4o / claude-opus-5):", self.var_prov_modelo, 4, ancho=30)
+        self._crear_entry_config(grid_add, "URL base:", self.var_prov_base_url, 2, ancho=34)
+        self._crear_entry_config(grid_add, "API Key:", self.var_prov_api_key, 3, ancho=34)
+        self._crear_entry_config(grid_add, "Modelo:", self.var_prov_modelo, 4, ancho=34)
         self._crear_label_dim(
             panel_add,
             "'OpenAI / compatible' sirve para OpenAI, Groq, Mistral, OpenRouter, Azure, etc.\n"
-            "— revisa la documentación de cada uno para su URL base exacta. 'Anthropic' usa\n"
-            "el formato propio de la API de Claude (distinto a OpenAI), ya configurado solo.",
+            "'Anthropic' usa el formato nativo de Claude (distinto a OpenAI), ya preconfigurado.",
         ).pack(anchor="w", padx=12, pady=(0, 8))
         self._crear_boton(panel_add, "💾 Guardar proveedor", self.agregar_proveedor_nube, primario=True).pack(anchor="w", padx=12, pady=(0, 12))
 
         self._refrescar_lista_proveedores()
+        self._refrescar_catalogo()
         return pagina
 
     def _al_cambiar_tipo_proveedor(self):
         if self.var_prov_tipo.get() == "Anthropic (Claude)":
             self.var_prov_base_url.set("https://api.anthropic.com/v1")
             if not self.var_prov_modelo.get().strip():
-                self.var_prov_modelo.set("claude-opus-5")
+                self.var_prov_modelo.set("claude-opus-5-5")
         elif self.var_prov_base_url.get().strip() == "https://api.anthropic.com/v1":
             self.var_prov_base_url.set("")
+
+    # ── Catálogo ─────────────────────────────────────────────────────────────
+
+    def _refrescar_catalogo(self):
+        if not hasattr(self, "lista_catalogo"):
+            return
+        filtro = self.var_cat_filtro.get().lower().strip()
+        solo_gratis = self.var_cat_solo_gratis.get()
+        self._cat_filtrados = []
+        for p in CATALOGO_PROVEEDORES:
+            if solo_gratis and not p.get("gratis"):
+                continue
+            if filtro and filtro not in p["nombre"].lower() and filtro not in p["base_url"].lower():
+                continue
+            self._cat_filtrados.append(p)
+        self.lista_catalogo.delete(0, tk.END)
+        t = self.tema
+        for p in self._cat_filtrados:
+            icono = "🆓" if p.get("gratis") else "💰"
+            self.lista_catalogo.insert(tk.END, f"{icono}  {p['nombre']}")
+        self.lista_catalogo.configure(
+            bg=mezclar(t["panel"], t["bg"], 0.65), fg=t["texto"],
+            selectbackground=t["acento"], selectforeground=t["acento_texto"],
+            highlightbackground=t["borde"], highlightcolor=t["acento"],
+            highlightthickness=1, relief="flat", bd=0,
+        )
+        self.var_cat_nota.set("")
+        self.combo_cat_modelos["values"] = []
+        self.var_cat_modelo_sugerido.set("")
+
+    def _al_seleccionar_catalogo(self):
+        if not hasattr(self, "lista_catalogo"):
+            return
+        sel = self.lista_catalogo.curselection()
+        if not sel or not hasattr(self, "_cat_filtrados"):
+            return
+        p = self._cat_filtrados[sel[0]]
+        self.var_cat_nota.set(p.get("nota", ""))
+        modelos = p.get("modelos", [])
+        self.combo_cat_modelos["values"] = modelos
+        self.var_cat_modelo_sugerido.set(modelos[0] if modelos else "")
+
+    def _usar_proveedor_catalogo(self):
+        if not hasattr(self, "lista_catalogo"):
+            return
+        sel = self.lista_catalogo.curselection()
+        if not sel or not hasattr(self, "_cat_filtrados"):
+            return
+        p = self._cat_filtrados[sel[0]]
+        self.var_prov_nombre.set(p["nombre"])
+        self.var_prov_base_url.set(p["base_url"])
+        self.var_prov_modelo.set(self.var_cat_modelo_sugerido.get() or (p["modelos"][0] if p["modelos"] else ""))
+        self.var_prov_tipo.set("Anthropic (Claude)" if p["tipo"] == "anthropic" else "OpenAI / compatible")
+        self.var_prov_api_key.set("")
+
+    # ─────────────────────────────────────────────────────────────────────────
 
     def _refrescar_lista_proveedores(self):
         self.lista_proveedores.delete(0, tk.END)
@@ -2636,8 +3040,16 @@ class AppAgentesia:
         return pagina
 
     def _cambiar_idioma(self, codigo):
+        if i18n.get_lang() == codigo:
+            return
         i18n.set_lang(codigo)
-        self.lbl_lang_nota.config(text=t("lang_restart_note"))
+        if messagebox.askyesno("Language / Idioma / 语言",
+                               "Restart now to apply the new language?\n"
+                               "¿Reiniciar ahora para aplicar el nuevo idioma?\n"
+                               "立即重启以应用新语言？"):
+            self.master.destroy()
+            subprocess.Popen([sys.executable] + sys.argv)
+            sys.exit(0)
 
     def _elegir_color_custom(self, clave):
         color_actual = self.tema.get(clave, "#000000")
