@@ -12,7 +12,7 @@ can talk to it. Everything runs on your own PC; nothing leaves it unless you tur
 
 ## Download
 
-Get **`gmn-ai-v1.1.4.zip`** from the [Releases page](https://github.com/jediknightgeorge-ship-it/gmn-ai/releases/latest),
+Get **`gmn-ai-v1.1.5.zip`** from the [Releases page](https://github.com/jediknightgeorge-ship-it/gmn-ai/releases/latest),
 unzip it anywhere and run `interfaz_agentes.exe`. No installer, no Python needed.
 
 You also need **your own `llama-server.exe`** (the app does not bundle llama.cpp). Download the build that matches
@@ -33,7 +33,7 @@ GPUs, or the *CPU* build if you have no GPU — and point the app to it once (Tu
 
 ## Interface languages
 
-Switch any time in **Appearance → Language** and restart to apply:
+Switch any time in **Appearance → Language** — the app asks to restart automatically:
 
 | | Language |
 |---|---|
@@ -93,7 +93,7 @@ Save your own with 💾 Save.
 **Monitoring & looks**
 - **Live monitor**: GPU usage, VRAM, temperature, CPU, RAM, and detected hardware (works with NVIDIA, AMD, Intel, or CPU-only).
 - **Apple-style design**: rounded cards, one-click ☀️/🌙 mode switch, automatic colour mixing for any accent colour, WCAG-checked text contrast.
-- **Multi-language UI**: 🇬🇧 English · 🇪🇸 Español · 🇨🇳 中文 — switch in Appearance, restart to apply.
+- **Multi-language UI**: 🇬🇧 English · 🇪🇸 Español · 🇨🇳 中文 — switch in Appearance, auto-restarts to apply.
 
 ## Real numbers (measured, not marketing)
 
@@ -136,6 +136,16 @@ Source files:
 | `interfaz_agentes.spec` | PyInstaller build recipe |
 
 ## Changelog
+
+### v1.1.5 — 2026-10-10
+- **Language switcher auto-restarts** — no more manual restart needed; the app offers a restart dialog the moment you change language
+- **2 new Prism ML sampling presets** for Ternary Bonsai models: `🟤 Bonsai (Prism ML - pensar)` (thinking mode) and `🟤 Bonsai (Prism ML - directo)` (instruct mode)
+- **5 new model profiles** inspired by the [Nichonauta](https://www.youtube.com/@nichonauta) channel:
+  - `🟤 Bonsai 27B Ternary (PrismML fork)` — Ternary-Bonsai-2-27B on RTX 2080 Ti; requires PrismML fork of llama.cpp
+  - `🟠 Qwen 3.5-27B IQ2 (GPU pequeña)` — Qwen 3.5-27B in extreme IQ2_XXS quantisation for 10–11 GB GPUs
+  - `🟢 Qwen 3.5-9B (agéntico / rápido)` — Qwen 3.5-9B Q4_K_M, full GPU, large context, ideal for agentic use
+  - `💜 Gemma 4 27B (equilibrio calidad)` — Gemma 4 27B Q4_K_M, auto-fit GPU+RAM
+  - `📐 Doble contexto (KV Cache q8_0)` — doubles effective context by quantising the KV cache to q8_0
 
 ### v1.1.4 — 2026-10-09
 - **Multi-language UI**: English (default) · Español · 中文 — switch in Appearance → Language
