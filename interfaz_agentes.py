@@ -3281,14 +3281,14 @@ class AppAgentesia:
 
     def _dibujar_modelos(self, modelos):
         self._modelos_filtrados_actual = modelos
-        t = self.tema
+        tema = self.tema
         for widget in self.frame_modelos.winfo_children():
             widget.destroy()
 
         if not modelos:
             tk.Label(
                 self.frame_modelos, text=t("status_no_model"),
-                bg=t["panel"], fg=t["peligro"], font=("Segoe UI", 10, "bold"),
+                bg=tema["panel"], fg=tema["peligro"], font=("Segoe UI", 10, "bold"),
             ).pack(anchor=tk.W, pady=10, padx=10)
             return
 
@@ -3300,7 +3300,7 @@ class AppAgentesia:
 
         for nombre, ruta_completa, gb in modelos:
             icono, color = self._clasificar_tamano(gb)
-            fila = tk.Frame(self.frame_modelos, bg=t["panel"])
+            fila = tk.Frame(self.frame_modelos, bg=tema["panel"])
             fila.pack(fill=tk.X, padx=6, pady=3)
 
             texto_rb = nombre
@@ -3309,12 +3309,12 @@ class AppAgentesia:
 
             rb = tk.Radiobutton(
                 fila, text=texto_rb, value=ruta_completa, variable=self.modelo_seleccionado,
-                bg=t["panel"], fg=t["texto"], selectcolor=t["bg"], activebackground=t["panel"],
-                activeforeground=t["acento"], font=("Segoe UI", 9), anchor="w",
+                bg=tema["panel"], fg=tema["texto"], selectcolor=tema["bg"], activebackground=tema["panel"],
+                activeforeground=tema["acento"], font=("Segoe UI", 9), anchor="w",
             )
             rb.pack(side=tk.LEFT, anchor=tk.W)
 
-            tk.Label(fila, text=f"{icono} {gb:.1f} GB", bg=t["panel"], fg=color, font=("Segoe UI", 9, "bold")).pack(side=tk.RIGHT, padx=8)
+            tk.Label(fila, text=f"{icono} {gb:.1f} GB", bg=tema["panel"], fg=color, font=("Segoe UI", 9, "bold")).pack(side=tk.RIGHT, padx=8)
 
     def filtrar_modelos(self):
         texto = self.filtro_busqueda.get().lower().strip()
