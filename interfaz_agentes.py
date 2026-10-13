@@ -273,6 +273,24 @@ CATALOGO_PROVEEDORES = [
         "gratis": True,
         "nota": "Servidor local LM Studio · API key puede ser 'lm-studio'",
     },
+    {
+        "nombre": "Chutes AI (gratis)",
+        "tipo": "openai",
+        "base_url": "https://llm.chutes.ai/v1",
+        "modelos": ["deepseek-ai/DeepSeek-V3-0324", "Qwen/Qwen3-235B-A22B",
+                    "meta-llama/Llama-3.3-70B-Instruct", "deepseek-ai/DeepSeek-R1"],
+        "gratis": True,
+        "nota": "Sin límite visible · sin tarjeta · chutes.ai/profile/api",
+    },
+    {
+        "nombre": "Featherless AI (gratis/pago)",
+        "tipo": "openai",
+        "base_url": "https://api.featherless.ai/v1",
+        "modelos": ["meta-llama/Meta-Llama-3.1-70B-Instruct",
+                    "mistralai/Mistral-7B-Instruct-v0.3", "Qwen/Qwen2.5-72B-Instruct"],
+        "gratis": True,
+        "nota": "Miles de modelos HuggingFace · tier gratis limitado · featherless.ai",
+    },
     # ── DE PAGO ────────────────────────────────────────────────────────────────
     {
         "nombre": "OpenAI (pago)",
@@ -533,6 +551,16 @@ PERFILES_INCLUIDOS = {
         "valores": dict(_BASE_RENDIMIENTO, contexto="4096", ngl="auto", auto_fit=True, fit_margen="1024",
                         batch_size="256", ubatch_size="128"),
     },
+    "★ ⚡ Qwen 3.5 4B Q4 con visión (ultra ligero)": {
+        "descripcion": "Para Qwen 3.5 4B Q4_K_M con mmproj de visión (~2.7 GB): todo en GPU, ultrarrápido.\n"
+                       "KV q8_0 para mantener calidad a contextos largos sin gastar VRAM extra.\n"
+                       "Ideal para agentes e IDEs (Roo Code, Qwen Code, Hermes Agent, AnythingLLM).\n"
+                       "Tip de @nichonauta: un 4B bien ajustado supera en práctica a modelos más grandes\n"
+                       "pero lentos. Selecciona tu archivo mmproj en 'Visión (mmproj)' si usas imágenes.\n"
+                       "Modelo: hf.co/Qwen/Qwen2.5-VL-3B-Instruct-GGUF o similar 4B con visión.",
+        "valores": dict(_BASE_RENDIMIENTO, contexto="32768", ngl="all", auto_fit=True, fit_margen="256",
+                        kv_k="q8_0", kv_v="q8_0", batch_size="512", ubatch_size="512"),
+    },
     "★ 🟣 Qwen3-8B en 2080 Ti (rápido)": {
         "descripcion": "Optimizado para Qwen3-8B Q4_K_M en RTX 2080 Ti (11 GB): todo en la GPU, contexto 8k,\n"
                        "caché KV q4_0 (rápido y ligero). Usa preset 'Qwen3 (oficial anti-bucle)' en muestreo.\n"
@@ -614,6 +642,71 @@ PERFILES_INCLUIDOS = {
         "valores": dict(_BASE_RENDIMIENTO, contexto="32768", ngl="all", auto_fit=True, fit_margen="512",
                         kv_k="q8_0", kv_v="q8_0", turboquant=False,
                         batch_size="512", ubatch_size="256"),
+    },
+    "★ ✍️ Gemma 4 12B QAT (redacción ES)": {
+        "descripcion": "Para Gemma 4 12B Instruct QAT UD-Q4_K_XL (~6.25 GB) en GPU: cuantización QAT\n"
+                       "de Google mantiene ~100% de calidad a 4 bits. El modelo más veloz para redactar\n"
+                       "correctamente en español. MTP en Q4 da más tokens/s que Q8 o F16 (pruebas reales).\n"
+                       "Basado en 'Ajustes óptimos para redacción' del canal Nichonauta.\n"
+                       "Modelo: huggingface.co (filtrar Gemma-4-12B-IT-QAT-GGUF o Gemma-4-12B-IT).",
+        "valores": dict(_BASE_RENDIMIENTO, contexto="16384", ngl="all", auto_fit=True, fit_margen="512",
+                        kv_k="q4_0", kv_v="q4_0", batch_size="512", ubatch_size="256",
+                        tipo_spec="MTP (sin modelo extra)", spec_n_max="2", spec_p_min="0.5"),
+    },
+    "★ 🤖 Qwen 3.5-9B + MTP interno (código/agentes)": {
+        "descripcion": "Para Qwen 3.5 9B UD-Q4_K_XL con MTP incorporado (~6 GB) en GPU: ideal para\n"
+                       "programación, herramientas y uso agéntico (Claude Code, Cline, Open Code...).\n"
+                       "El MTP ya viene dentro del .gguf: no necesitas archivo draft separado.\n"
+                       "MTP en Q4 da más tokens/s que Q8 o F16. Nichonauta recomienda Q4 sobre Q8/F16.\n"
+                       "Modelo: huggingface.co/unsloth (Qwen3.5-9B-Instruct-GGUF, UD-Q4_K_XL).",
+        "valores": dict(_BASE_RENDIMIENTO, contexto="16384", ngl="all", auto_fit=True, fit_margen="512",
+                        kv_k="q4_0", kv_v="q4_0", batch_size="512", ubatch_size="256",
+                        tipo_spec="MTP (sin modelo extra)", spec_n_max="2", spec_p_min="0.5"),
+    },
+    "★ 🟡 Qwen3.8-14B Turbo IQ4_XS (calidad máx 2080 Ti)": {
+        "descripcion": "Para Qwen3.8-14B-Instruct-Turbo i1-IQ4_XS (8.41 GB) en RTX 2080 Ti (11 GB):\n"
+                       "todo en GPU con ~2.6 GB libres para KV cache. Calidad casi idéntica a Q4_K_M\n"
+                       "pero 750 MB más pequeño gracias al imatrix de calibración (i1).\n"
+                       "Contexto 16k cómodo con KV q4_0. Checkpoints=2 libera VRAM del historial.\n"
+                       "Descarga: hf.co/mradermacher/Qwen3.8-14B-Instruct-Turbo-i1-GGUF (IQ4_XS).",
+        "valores": dict(_BASE_RENDIMIENTO, contexto="16384", ngl="all", auto_fit=True, fit_margen="512",
+                        kv_k="q4_0", kv_v="q4_0", batch_size="512", ubatch_size="256",
+                        ctx_checkpoints="2",
+                        tipo_spec="MTP (sin modelo extra)", spec_n_max="2", spec_p_min="0.5"),
+    },
+    "★ 🟡 Qwen3.8-14B Turbo IQ3_S (contexto máx 2080 Ti)": {
+        "descripcion": "Para Qwen3.8-14B-Instruct-Turbo i1-IQ3_S (7.01 GB) en RTX 2080 Ti (11 GB):\n"
+                       "todo en GPU con ~4 GB libres → contexto 32k sin tocar la RAM. Perfecto para\n"
+                       "prompts largos, código extenso o documentos completos.\n"
+                       "Checkpoints=4 libera VRAM del historial para contextos aún mayores con holgura.\n"
+                       "Descarga: hf.co/mradermacher/Qwen3.8-14B-Instruct-Turbo-i1-GGUF (IQ3_S).",
+        "valores": dict(_BASE_RENDIMIENTO, contexto="32768", ngl="all", auto_fit=True, fit_margen="512",
+                        kv_k="q4_0", kv_v="q4_0", batch_size="512", ubatch_size="256",
+                        ctx_checkpoints="4",
+                        tipo_spec="MTP (sin modelo extra)", spec_n_max="2", spec_p_min="0.5"),
+    },
+    "★ 🟣 Qwen 3.6 35B-A3B IQ2 (MoE rápido 2080 Ti)": {
+        "descripcion": "Para Qwen 3.6 35B-A3B IQ2_XXS (~10.3 GB) en RTX 2080 Ti (11 GB):\n"
+                       "MoE activa solo ~3B params por token → velocidad de modelo pequeño\n"
+                       "con calidad de 35B. @Ricardo_Bertran obtuvo 142 tok/s en RTX 5070 (12 GB).\n"
+                       "KV q4_0 en lugar de Q8 del video (1 GB menos de VRAM en 2080 Ti).\n"
+                       "Batch 256/128 igual que el video. ctx_checkpoints=2 para contextos largos.\n"
+                       "Modelo: github.com/RicardoBertran/qwen3.6-35b-a3b-144T-S (IQ2_XXS).",
+        "valores": dict(_BASE_RENDIMIENTO, contexto="16384", ngl="all", auto_fit=True, fit_margen="512",
+                        kv_k="q4_0", kv_v="q4_0", batch_size="256", ubatch_size="128",
+                        ctx_checkpoints="2",
+                        tipo_spec="Ninguno"),
+    },
+    "★ 🟣 Qwen3.6 35B-A3B Q4 (MoE GPU pequeña, 64K)": {
+        "descripcion": "Para Qwen3.6-35B-A3B Q4_K_M (19 GB) con cualquier GPU desde 6 GB:\n"
+                       "los expertos MoE van a la RAM, solo capas compartidas en GPU → <4 GB VRAM.\n"
+                       "Probado >35 tok/s en RTX 5070. Funciona en 6-8 GB (menos tok/s).\n"
+                       "Contexto 64K, ubatch 1024 para leer prompts largos rápido (ventaja MoE).\n"
+                       "KV q4_0 para que el contexto largo no agote la VRAM.\n"
+                       "Basado en el video de IA LOCAL GRATIS (YouTube Shorts U5rZPmK5cVg).",
+        "valores": dict(_BASE_RENDIMIENTO, contexto="65536", ngl="auto", auto_fit=True, fit_margen="512",
+                        kv_k="q4_0", kv_v="q4_0", batch_size="2048", ubatch_size="1024",
+                        moe_modo="Todos los expertos en CPU (-cmoe)"),
     },
 }
 
@@ -942,7 +1035,7 @@ def obtener_info_hardware():
 class AppAgentesia:
     def __init__(self, root):
         self.root = root
-        self.root.title("GMN AI v1.1.6 — llama.cpp + TurboQuant")
+        self.root.title("GMN AI v1.1.10 — llama.cpp + TurboQuant")
         self.root.geometry("1160x720")
         self.root.minsize(980, 620)
 
@@ -1220,12 +1313,12 @@ class AppAgentesia:
         """Encabezado plano estilo Apple: logo, titulo, subtitulo y una
         pastilla dia/noche a la derecha, con una linea fina abajo."""
         c = self.header_canvas
-        t = self.tema
+        tema = self.tema
         c.delete("all")
-        c.configure(bg=t["bg"])
+        c.configure(bg=tema["bg"])
         ancho = max(c.winfo_width(), 1)
         alto = max(c.winfo_height(), 1)
-        c.create_line(0, alto - 1, ancho, alto - 1, fill=t["borde"])
+        c.create_line(0, alto - 1, ancho, alto - 1, fill=tema["borde"])
 
         logo = self._cargar_logo()
         cy = alto // 2
@@ -1235,20 +1328,20 @@ class AppAgentesia:
         else:
             # Sin el logo (no se encontro el archivo): circulo con emoji de respaldo.
             cx, r = 46, 23
-            c.create_oval(cx - r, cy - r, cx + r, cy + r, fill=t["acento"], outline="")
+            c.create_oval(cx - r, cy - r, cx + r, cy + r, fill=tema["acento"], outline="")
             c.create_text(cx, cy, text="🐆", font=("Segoe UI Emoji", 18))
             texto_x = cx + r + 14
 
-        c.create_text(texto_x, cy - 11, anchor="w", text="GMN AI", fill=t["texto"], font=("Segoe UI", 17, "bold"))
+        c.create_text(texto_x, cy - 11, anchor="w", text="GMN AI", fill=tema["texto"], font=("Segoe UI", 17, "bold"))
         c.create_text(texto_x, cy + 13, anchor="w", text=t("header_subtitle"),
-                      fill=t["texto_dim"], font=("Segoe UI", 9))
+                      fill=tema["texto_dim"], font=("Segoe UI", 9))
 
         # Pastilla dia/noche (clic en cualquier lado la alterna).
         noche = self._modo_noche_actual()
         pw, ph, seg_w, seg_h = 80, 32, 36, 26
         x1, y1 = ancho - 24 - pw, cy - ph // 2
-        pastilla = imagen_redondeada(pw, ph, ph // 2, t["panel"], t["borde"])
-        activa = imagen_redondeada(seg_w, seg_h, seg_h // 2, t["acento"])
+        pastilla = imagen_redondeada(pw, ph, ph // 2, tema["panel"], tema["borde"])
+        activa = imagen_redondeada(seg_w, seg_h, seg_h // 2, tema["acento"])
         self._imgs_header = [pastilla, activa]
         c.create_image(x1, y1, anchor="nw", image=pastilla, tags="toggle")
         sx = x1 + pw - 3 - seg_w if noche else x1 + 3
@@ -2072,7 +2165,13 @@ class AppAgentesia:
         self.lista_catalogo.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         scroll_cat.pack(side=tk.RIGHT, fill=tk.Y)
 
-        # Nota del proveedor seleccionado
+        # Badge gratis/pago + nota del proveedor seleccionado
+        fila_badge = tk.Frame(panel_cat)
+        fila_badge.pack(fill=tk.X, padx=12, pady=(2, 0))
+        self._widgets_panel.append(("panel", fila_badge))
+        self._lbl_cat_badge = tk.Label(fila_badge, text="", font=("Segoe UI", 9, "bold"),
+                                       bg=self.tema["panel"])
+        self._lbl_cat_badge.pack(side=tk.LEFT)
         self.var_cat_nota = tk.StringVar(value="")
         lbl_nota = self._crear_label_dim(panel_cat, "", fondo="panel")
         lbl_nota.configure(textvariable=self.var_cat_nota)
@@ -2091,13 +2190,23 @@ class AppAgentesia:
         )
         self.combo_cat_modelos.pack(side=tk.LEFT, padx=(4, 0))
 
-        # Botón "Usar este →"
+        # Botones "Usar este" y "Probar conexión"
         fila_btn_cat = tk.Frame(panel_cat)
-        fila_btn_cat.pack(fill=tk.X, padx=12, pady=(0, 12))
+        fila_btn_cat.pack(fill=tk.X, padx=12, pady=(0, 6))
         self._widgets_panel.append(("panel", fila_btn_cat))
         self._crear_boton(
             fila_btn_cat, "✅ Usar este proveedor →", self._usar_proveedor_catalogo, primario=True,
         ).pack(side=tk.LEFT)
+        self._crear_boton(
+            fila_btn_cat, "🔌 Probar conexión", self._probar_conexion_catalogo,
+        ).pack(side=tk.LEFT, padx=(8, 0))
+
+        # Resultado del test de conexión
+        self.var_cat_test = tk.StringVar(value="")
+        lbl_test = self._crear_label_dim(panel_cat, "", fondo="panel")
+        lbl_test.configure(textvariable=self.var_cat_test)
+        lbl_test.pack(anchor="w", padx=12, pady=(0, 12))
+        self._lbl_cat_test = lbl_test
 
         self.lista_catalogo.bind("<<ListboxSelect>>", lambda e: self._al_seleccionar_catalogo())
 
@@ -2185,6 +2294,13 @@ class AppAgentesia:
         modelos = p.get("modelos", [])
         self.combo_cat_modelos["values"] = modelos
         self.var_cat_modelo_sugerido.set(modelos[0] if modelos else "")
+        # Badge gratis/pago
+        gratis = p.get("gratis", False)
+        badge_txt = "🟢 GRATIS" if gratis else "💰 DE PAGO"
+        badge_color = self.tema.get("ok", "#3FDD9B") if gratis else self.tema.get("warn", "#E3B341")
+        self._lbl_cat_badge.config(text=badge_txt, fg=badge_color)
+        # Limpiar resultado de test anterior
+        self.var_cat_test.set("")
 
     def _usar_proveedor_catalogo(self):
         if not hasattr(self, "lista_catalogo"):
@@ -2198,6 +2314,51 @@ class AppAgentesia:
         self.var_prov_modelo.set(self.var_cat_modelo_sugerido.get() or (p["modelos"][0] if p["modelos"] else ""))
         self.var_prov_tipo.set("Anthropic (Claude)" if p["tipo"] == "anthropic" else "OpenAI / compatible")
         self.var_prov_api_key.set("")
+
+    def _probar_conexion_catalogo(self):
+        if not hasattr(self, "lista_catalogo"):
+            return
+        sel = self.lista_catalogo.curselection()
+        if not sel or not hasattr(self, "_cat_filtrados"):
+            return
+        p = self._cat_filtrados[sel[0]]
+        url_base = p["base_url"].rstrip("/")
+        if "{" in url_base:
+            self.var_cat_test.set("⚠ URL tiene variables — completa {account_id} etc. antes de probar")
+            return
+        api_key = self.var_prov_api_key.get().strip() or "none"
+        tipo = p.get("tipo", "openai")
+        self.var_cat_test.set("⏳ Probando…")
+        self._lbl_cat_test.config(fg=self.tema.get("texto_dim", self.tema["texto"]))
+
+        def _test():
+            import urllib.request, urllib.error
+            try:
+                headers = {"Authorization": f"Bearer {api_key}"}
+                if tipo == "anthropic":
+                    headers = {"x-api-key": api_key, "anthropic-version": "2023-06-01"}
+                req = urllib.request.Request(f"{url_base}/models", headers=headers)
+                with urllib.request.urlopen(req, timeout=8) as resp:
+                    codigo = resp.status
+                resultado = f"✅ Conexión OK (HTTP {codigo})"
+                color = self.tema.get("ok", "#3FDD9B")
+            except urllib.error.HTTPError as e:
+                if e.code in (401, 403):
+                    resultado = f"⚠ API key inválida o faltante (HTTP {e.code})"
+                    color = self.tema.get("warn", "#E3B341")
+                else:
+                    resultado = f"⚠ HTTP {e.code} — {e.reason}"
+                    color = self.tema.get("warn", "#E3B341")
+            except Exception as ex:
+                resultado = f"❌ {str(ex)[:70]}"
+                color = self.tema.get("peligro", "#F85149")
+            self.root.after(0, lambda: (
+                self.var_cat_test.set(resultado),
+                self._lbl_cat_test.config(fg=color),
+            ))
+
+        import threading
+        threading.Thread(target=_test, daemon=True).start()
 
     # ─────────────────────────────────────────────────────────────────────────
 

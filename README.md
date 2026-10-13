@@ -12,7 +12,7 @@ can talk to it. Everything runs on your own PC; nothing leaves it unless you tur
 
 ## Download
 
-Get **`gmn-ai-v1.1.6.zip`** from the [Releases page](https://github.com/jediknightgeorge-ship-it/gmn-ai/releases/latest),
+Get **`gmn-ai-v1.1.10.zip`** from the [Releases page](https://github.com/jediknightgeorge-ship-it/gmn-ai/releases/latest),
 unzip it anywhere and run `interfaz_agentes.exe`. No installer, no Python needed.
 
 You also need **your own `llama-server.exe`** (the app does not bundle llama.cpp). Download the build that matches
@@ -53,9 +53,14 @@ Save your own with 💾 Save.
 | 🐘 **Big model (GPU+RAM)** | As many layers as fit on GPU, rest in RAM | Model is bigger than your VRAM |
 | 🧩 **Big MoE model** | Shared layers on GPU, experts in RAM, large batches | MoE models (Nemotron, Qwen 35B-A3B…) |
 | 🛡️ **Safe** | 4k context, 1 GB VRAM margin, small batches | PC is used for other things simultaneously |
+| ⚡ **Qwen 3.5 4B Q4 + vision (ultra-light)** | 2.7 GB, full GPU, KV q8_0, 32k ctx | Agents & IDEs on any GPU |
 | 🔵 **Qwen3.8-27B IQ2 on 2080 Ti (full GPU)** | All layers on GPU, ctx checkpoints, KV q4_0, MTP spec | Qwen3.8-27B IQ2_XS on 11 GB card |
 | 🔵 **Qwen3.8-27B Q3 on 2080 Ti (RAM+GPU)** | Auto-fit, ctx checkpoints, batch 1024/512 | Q3 with partial RAM offload |
 | 🔵 **Qwen3.8-27B IQ2 + MTP draft (max speed)** | Full speculative decoding with draft backend sampling | Maximum tok/s on 11 GB card |
+| 🟡 **Qwen3.8-14B Turbo IQ4_XS (2080 Ti)** | 8.41 GB full GPU, 16k ctx, MTP, checkpoints=2 | Max quality in 11 GB |
+| 🟡 **Qwen3.8-14B Turbo IQ3_S (2080 Ti)** | 7.01 GB full GPU, 32k ctx, checkpoints=4 | Max context in 11 GB |
+| 🟣 **Qwen 3.6 35B-A3B IQ2 (fast MoE, 2080 Ti)** | 10.3 GB full GPU, KV q4_0, MTP, checkpoints=2 | 35B quality at small-model speed |
+| 🟣 **Qwen3.6 35B-A3B Q4 (small GPU MoE, 64K)** | Experts in RAM, <4 GB VRAM, 64k ctx | 6 GB+ GPU, long context |
 
 ## Everything the app does
 
@@ -136,6 +141,28 @@ Source files:
 | `interfaz_agentes.spec` | PyInstaller build recipe |
 
 ## Changelog
+
+### v1.1.10 — 2026-10-13
+- **4 new model profiles** from community video research:
+  - `⚡ Qwen 3.5 4B Q4 con visión (ultra ligero)` — 2.7 GB, full GPU, KV q8_0, 32k context; ideal for agents and IDEs (Roo Code, Qwen Code, AnythingLLM). Tip from [@nichonauta](https://www.youtube.com/@nichonauta): a well-tuned 4B beats a slow large model in practice.
+  - `🟣 Qwen3.6 35B-A3B Q4 (MoE GPU pequeña, 64K)` — Q4_K_M (19 GB) with all MoE experts in RAM → <4 GB VRAM. Works from 6 GB GPUs up. 64k context, ubatch 1024 for fast prompt reads. Based on [@IALocalGratis](https://www.youtube.com/shorts/U5rZPmK5cVg).
+  - `🟣 Qwen 3.6 35B-A3B IQ2 (MoE rápido 2080 Ti)` — IQ2_XXS (~10.3 GB) fully on GPU; KV q4_0, ctx_checkpoints=2. Based on [@Ricardo_Bertran](https://github.com/RicardoBertran/qwen3.6-35b-a3b-144T-S) (142 tok/s on RTX 5070).
+  - `🟣 Qwen3.8-14B Turbo IQ3_S (contexto máx 2080 Ti)` — i1-IQ3_S (7.01 GB), 32k context, 4 GB free for KV cache on 11 GB cards.
+
+### v1.1.9 — 2026-10-13
+- **2 new model profiles** for Qwen3.8-14B Turbo and Qwen3.6 35B-A3B:
+  - `🟡 Qwen3.8-14B Turbo IQ4_XS (calidad máx 2080 Ti)` — i1-IQ4_XS (8.41 GB), near Q4_K_M quality, 16k context with 2.6 GB free for KV.
+  - `🟡 Qwen3.8-14B Turbo IQ3_S (contexto máx 2080 Ti)` — i1-IQ3_S (7.01 GB), 32k context, checkpoints=4.
+
+### v1.1.8 — 2026-10-12
+- **2 new model profiles** based on community benchmarks:
+  - `✍️ Gemma 4 12B QAT (redacción ES)` — Google QAT at 4-bit keeps ~100% quality; fastest for Spanish writing. MTP in Q4 precision for extra speed.
+  - `🤖 Qwen 3.5-9B + MTP interno (código/agentes)` — MTP head built into the GGUF; no separate draft file needed. Best for coding and agentic use.
+
+### v1.1.7 — 2026-10-11
+- **Provider badges**: each provider in the catalog now shows a coloured FREE / PAID badge at a glance.
+- **2 new providers**: Chutes AI and Featherless AI added to the 28-provider catalog.
+- **Provider test button**: test the connection to any cloud provider directly from the catalog — no need to open Chat first.
 
 ### v1.1.6 — 2026-10-10
 - **Cloud providers catalog**: 28 providers pre-configured (Groq, Google Gemini, Mistral, NVIDIA NIM, OpenRouter, Cerebras, Cohere, Cloudflare, Hugging Face, LLM7.io, Kilo Code, SambaNova, DeepSeek, xAI Grok, Zhipu GLM, Ollama, LM Studio — plus OpenAI, Anthropic, Azure, Together AI, Fireworks, Perplexity and more paid providers). Just click a provider → choose a model → paste your API key.

@@ -38,4 +38,30 @@ El exe ejecutaba codigo antiguo aunque el fuente estuviera correcto.
 
 ---
 
+## Estructura de carpetas de compilación
+
+```
+H:\gmi_IA_desktop\
+├── dist_v2\gmn ai\            ← salida temporal del compilador (se sobreescribe cada vez)
+│   ├── interfaz_agentes.exe
+│   └── _internal\
+└── releases\                  ← una subcarpeta por versión aprobada y probada
+    ├── v1.1.5\
+    │   ├── interfaz_agentes.exe
+    │   └── _internal\
+    └── v1.1.6\
+        ├── interfaz_agentes.exe
+        └── _internal\
+```
+
+### Reglas de la estructura
+
+- **`dist_v2`** es la única carpeta temporal de compilación. No crear `dist_v3`, `dist_nuevo`, etc.
+- Después de compilar y **antes de subir nada**, el usuario prueba el exe de `dist_v2\gmn ai\`.
+- Solo cuando el usuario da el OK: copiar `dist_v2\gmn ai\*` a `releases\vX.X.X\` y proceder con el ZIP y la publicación.
+- El ZIP para GitHub se crea desde `dist_v2\gmn ai\*`, no desde `releases\`.
+- Nunca borrar versiones anteriores de `releases\` sin permiso explícito del usuario.
+
+---
+
 Creado: 2026-10-10
