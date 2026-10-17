@@ -12,7 +12,7 @@ can talk to it. Everything runs on your own PC; nothing leaves it unless you tur
 
 ## Download
 
-Get **`gmn-ai-v1.1.10.zip`** from the [Releases page](https://github.com/jediknightgeorge-ship-it/gmn-ai/releases/latest),
+Get **`gmn-ai-v1.1.13.zip`** from the [Releases page](https://github.com/jediknightgeorge-ship-it/gmn-ai/releases/latest),
 unzip it anywhere and run `interfaz_agentes.exe`. No installer, no Python needed.
 
 You also need **your own `llama-server.exe`** (the app does not bundle llama.cpp). Download the build that matches
@@ -141,6 +141,19 @@ Source files:
 | `interfaz_agentes.spec` | PyInstaller build recipe |
 
 ## Changelog
+
+### v1.1.13 — 2026-10-17
+- **New model profile**: Qwen3.8-Flash-Next 125B-A6B (MoE) — experts in RAM via `--cpu-moe`; includes `-ot per_layer_token_embd=CPU` to offload the 51B embedding table; requires ≥64 GB system RAM.
+- **New model profile**: Bonsai 27B 1-bit Q1_0 — 3.5 GB on disk, runs on standard llama.cpp (no fork), ≈89% of FP16 quality; 65k context auto-fitted on 11 GB cards.
+- **New MoE field**: Override tensor (`-ot`) — comma-separated tensor overrides passed as `-ot` flags; essential for models with large embedding tables.
+- **Bug fix**: "Solo gratis" checkbox in Cloud Providers now shows correct text/background color in dark mode.
+
+### v1.1.11 — 2026-10-15
+- **Smooth hover animation** on all buttons: 60fps exponential interpolation (≈150ms) instead of instant color swap.
+- **Glow ring** on hovered buttons — a subtle glow border that fades in with the hover.
+- **Animated progress bars** on the Monitor page: GPU/VRAM/CPU/RAM bars slide smoothly to their new value instead of jumping.
+- **Spinner animation**: the loading state now shows a spinning Braille indicator (`⠋⠙⠹…`) at 10fps instead of static dots.
+- **3 new dark themes**: Cosmos (deep indigo), Carbón Dorado (carbon + gold), Aurora (midnight teal). Now 9 themes total.
 
 ### v1.1.10 — 2026-10-13
 - **4 new model profiles** from community video research:
